@@ -1,0 +1,13 @@
+:9091 {
+	@remote_write {
+		method POST
+		path /api/v1/write
+		header Authorization "Bearer {$MONITORING_TOKEN}"
+	}
+
+	handle @remote_write {
+		reverse_proxy prometheus:9090
+	}
+
+	respond "Not found" 404
+}

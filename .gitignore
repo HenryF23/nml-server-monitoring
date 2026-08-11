@@ -1,0 +1,4 @@
+central/.env
+node/.env
+node/.monitoring-token
+node/prometheus/agent.yml

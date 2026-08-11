@@ -1,0 +1,53 @@
+name: monitoring-central
+
+services:
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v3.13.2}
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}
+      - --web.enable-remote-write-receiver
+    ports:
+      # Safer default: Prometheus UI is only exposed on the monitoring host.
+      # Change PROMETHEUS_BIND_IP if you intentionally want remote UI access.
+      - "${PROMETHEUS_BIND_IP:-127.0.0.1}:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
+  # Exposes only the remote-write endpoint. A shared bearer token prevents
+  # unauthorised hosts from sending metrics to Prometheus.
+  metrics-gateway:
+    image: caddy:${CADDY_VERSION:-2-alpine}
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      MONITORING_TOKEN: ${MONITORING_TOKEN:?Set MONITORING_TOKEN in .env}
+    ports:
+      - "${REMOTE_WRITE_BIND_IP:-0.0.0.0}:${REMOTE_WRITE_PORT:-9091}:9091"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+
+  grafana:
+    image: grafana/grafana:${GRAFANA_VERSION:-13.1.3}
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    ports:
+      - "${GRAFANA_BIND_IP:-0.0.0.0}:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+volumes:
+  prometheus_data:
+  grafana_data:

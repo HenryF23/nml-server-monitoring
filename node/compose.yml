@@ -1,0 +1,60 @@
+name: monitoring-node
+
+services:
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:${NODE_EXPORTER_VERSION:-v1.12.1}
+    restart: unless-stopped
+    pid: host
+    command:
+      - --path.rootfs=/host
+    volumes:
+      - /:/host:ro,rslave
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:${CADVISOR_VERSION:-v0.60.5}
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+
+  dcgm-exporter:
+    image: nvcr.io/nvidia/k8s/dcgm-exporter:${DCGM_EXPORTER_TAG:-latest}
+    restart: unless-stopped
+    profiles:
+      - gpu
+    cap_add:
+      - SYS_ADMIN
+    gpus: all
+
+  # Agent mode scrapes the exporters over this private Compose network and
+  # forwards every sample to the central Prometheus server.
+  prometheus-agent:
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v3.13.2}
+    restart: unless-stopped
+    user: "65534:65534"
+    depends_on:
+      - node-exporter
+      - cadvisor
+    command:
+      - --agent
+      - --config.file=/etc/prometheus/agent.yml
+      - --storage.agent.path=/prometheus
+      - --web.listen-address=0.0.0.0:9090
+    environment:
+      SERVER_NAME: ${SERVER_NAME:?Run setup-node.sh first}
+    ports:
+      # Agent health/target UI is available only from the monitored host.
+      - "127.0.0.1:${PROMETHEUS_AGENT_PORT:-9095}:9090"
+    volumes:
+      - ./prometheus/agent.yml:/etc/prometheus/agent.yml:ro
+      - ./.monitoring-token:/run/secrets/monitoring_token:ro
+      - prometheus_agent_data:/prometheus
+
+volumes:
+  prometheus_agent_data:
