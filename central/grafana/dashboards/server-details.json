@@ -44,7 +44,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Available: all GPUs free and CPU below 25%. Has Capacity: some GPUs free and CPU below 25%. Metrics Missing: node metrics are online but GPU status is absent.",
+      "description": "Capacity status: Available, Has Capacity, CPU Busy, In Use, CPU Only, Metrics Missing, or Offline.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -59,34 +59,34 @@
                   "text": "OFFLINE"
                 },
                 "1": {
-                  "color": "purple",
+                  "color": "dark-purple",
                   "index": 1,
-                  "text": "CPU ONLY"
+                  "text": "METRICS MISSING"
                 },
                 "2": {
-                  "color": "dark-orange",
+                  "color": "purple",
                   "index": 2,
-                  "text": "IN USE"
+                  "text": "CPU ONLY"
                 },
                 "3": {
-                  "color": "dark-yellow",
+                  "color": "dark-orange",
                   "index": 3,
-                  "text": "CPU BUSY"
+                  "text": "IN USE"
                 },
                 "4": {
-                  "color": "dark-blue",
+                  "color": "dark-yellow",
                   "index": 4,
-                  "text": "HAS CAPACITY"
+                  "text": "CPU BUSY"
                 },
                 "5": {
-                  "color": "dark-green",
+                  "color": "dark-blue",
                   "index": 5,
-                  "text": "AVAILABLE"
+                  "text": "HAS CAPACITY"
                 },
                 "6": {
-                  "color": "dark-purple",
+                  "color": "dark-green",
                   "index": 6,
-                  "text": "METRICS MISSING"
+                  "text": "AVAILABLE"
                 }
               },
               "type": "value"
@@ -100,27 +100,27 @@
                 "value": null
               },
               {
-                "color": "purple",
+                "color": "dark-purple",
                 "value": 1
               },
               {
-                "color": "dark-orange",
+                "color": "purple",
                 "value": 2
               },
               {
-                "color": "dark-yellow",
+                "color": "dark-orange",
                 "value": 3
               },
               {
-                "color": "dark-blue",
+                "color": "dark-yellow",
                 "value": 4
               },
               {
-                "color": "dark-green",
+                "color": "dark-blue",
                 "value": 5
               },
               {
-                "color": "dark-purple",
+                "color": "dark-green",
                 "value": 6
               }
             ]
@@ -154,7 +154,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "max(nml:server_status{server=~\"${server:regex}\"}) or (1 * max(up{job=\"node-exporter\",gpu=\"false\",server=~\"${server:regex}\"})) or (6 * max(up{job=\"node-exporter\",server=~\"${server:regex}\"})) or (0 * max(max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h])))",
+          "expr": "max(nml:server_status{server=~\"${server:regex}\"}) or (2 * max(up{job=\"node-exporter\",gpu=\"false\",server=~\"${server:regex}\"})) or (1 * max(up{job=\"node-exporter\",server=~\"${server:regex}\"})) or (0 * max(max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h])))",
           "instant": true,
           "legendFormat": "Status",
           "range": false,
@@ -1504,5 +1504,5 @@
   "timezone": "browser",
   "title": "Server Details",
   "uid": "nml-server-detail",
-  "version": 4
+  "version": 5
 }

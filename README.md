@@ -179,18 +179,20 @@ The first screen is designed for choosing a server:
 - **Offline** means a server was seen within 24 hours but has no current data.
 
 A GPU is considered free when its five-minute average compute and VRAM usage
-are both below 10%. The **Free GPUs** column shows the exact usable count, so a
+are both below 10%. The **Free** column shows the exact usable count, so a
 four-GPU server with two occupied GPUs and low host CPU is shown as
 **Has Capacity · 2 free**.
 
-The server table shows GPU model and count, free GPUs, GPU compute, VRAM, CPU,
-RAM, and the hottest GPU and CPU temperatures. CPU temperature is blank when
-the host does not expose a supported hwmon sensor. Disk usage remains available
-in **Server Details**; Tailscale IPs are intentionally omitted. The **Servers**
-selector filters every overview panel and supports one or several servers.
+The table is ordered for scheduling: Available, Has Capacity, CPU Busy, In Use,
+CPU Only, Metrics Missing, then Offline. Its columns are **Server**, **Status**,
+**GPU Model**, **GPUs**, **Free**, **GPU Util**, **VRAM**, **CPU**, **Memory**,
+**GPU Temp**, and **CPU Temp**. Missing values display as `N/A`; CPU temperature
+is unavailable when the host exposes no supported hwmon sensor. Disk usage
+remains in **Server Details**, and Tailscale IPs are intentionally omitted. The
+GPU model summary assumes the GPUs within one server share a model.
 
-Click a server name in the table to open **Server Details** with the current
-time range preserved. That view shows per-GPU inventory, compute, VRAM,
+Click a server name in the table to open **Server Details** for the latest 24
+hours. That view shows per-GPU inventory, compute, VRAM,
 temperature and power history, host CPU/RAM/disk history, and the busiest
 application containers. Its **Server** selector switches directly between
 machines.

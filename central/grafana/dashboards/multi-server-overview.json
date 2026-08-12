@@ -16,14 +16,14 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 2,
+        "h": 3,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "id": 1,
       "options": {
-        "content": "**AVAILABLE** = all GPUs free + CPU below 25%.  **HAS CAPACITY** = some GPUs free + CPU below 25%.  **CPU BUSY** = GPUs free but CPU at or above 25%.  **IN USE** = no free GPUs.",
+        "content": "**AVAILABLE** = all GPUs free + CPU <25%  ·  **HAS CAPACITY** = some GPUs free + CPU <25%  ·  **CPU BUSY** = GPUs free + CPU ≥25%  ·  **IN USE** = no free GPUs\n\n**CPU ONLY** = GPU monitoring disabled  ·  **METRICS MISSING** = server online but GPU status unavailable  ·  **OFFLINE** = node telemetry unavailable",
         "mode": "markdown"
       },
       "title": "",
@@ -63,7 +63,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 2
+        "y": 3
       },
       "id": 2,
       "options": {
@@ -92,7 +92,7 @@
           "refId": "A"
         }
       ],
-      "title": "Fully Available",
+      "title": "Available Servers",
       "type": "stat"
     },
     {
@@ -128,7 +128,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 2
+        "y": 3
       },
       "id": 3,
       "options": {
@@ -181,7 +181,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 2
+        "y": 3
       },
       "id": 4,
       "options": {
@@ -203,14 +203,14 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(nml:server_status{server=~\"${server:regex}\"} == bool 2) or vector(0)",
+          "expr": "sum(nml:server_status{server=~\"${server:regex}\"} == bool 3) or vector(0)",
           "instant": true,
-          "legendFormat": "In Use",
+          "legendFormat": "No Free GPUs",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "Fully In Use",
+      "title": "Servers · No Free GPUs",
       "type": "stat"
     },
     {
@@ -246,7 +246,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 2
+        "y": 3
       },
       "id": 5,
       "options": {
@@ -268,14 +268,14 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "clamp_min((count(max by (server) (max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h]))) or vector(0)) - (count(max by (server) (up{job=\"node-exporter\",server=~\"${server:regex}\"})) or vector(0)), 0)",
+          "expr": "clamp_min((count(max by (server) (max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h]))) or vector(0)) - (count(max by (server) (up{job=\"node-exporter\",server=~\"${server:regex}\"}) == 1) or vector(0)), 0)",
           "instant": true,
           "legendFormat": "Offline",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "Offline · 24h",
+      "title": "Offline Servers",
       "type": "stat"
     },
     {
@@ -294,6 +294,7 @@
             "inspect": false
           },
           "mappings": [],
+          "noValue": "N/A",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -311,10 +312,6 @@
               "options": "Status"
             },
             "properties": [
-              {
-                "id": "custom.width",
-                "value": 160
-              },
               {
                 "id": "custom.align",
                 "value": "center"
@@ -336,34 +333,34 @@
                         "text": "OFFLINE"
                       },
                       "1": {
-                        "color": "purple",
+                        "color": "dark-purple",
                         "index": 1,
-                        "text": "CPU ONLY"
+                        "text": "METRICS MISSING"
                       },
                       "2": {
-                        "color": "dark-orange",
+                        "color": "purple",
                         "index": 2,
-                        "text": "IN USE"
+                        "text": "CPU ONLY"
                       },
                       "3": {
-                        "color": "dark-yellow",
+                        "color": "dark-orange",
                         "index": 3,
-                        "text": "CPU BUSY"
+                        "text": "IN USE"
                       },
                       "4": {
-                        "color": "dark-blue",
+                        "color": "dark-yellow",
                         "index": 4,
-                        "text": "HAS CAPACITY"
+                        "text": "CPU BUSY"
                       },
                       "5": {
-                        "color": "dark-green",
+                        "color": "dark-blue",
                         "index": 5,
-                        "text": "AVAILABLE"
+                        "text": "HAS CAPACITY"
                       },
                       "6": {
-                        "color": "dark-purple",
+                        "color": "dark-green",
                         "index": 6,
-                        "text": "METRICS MISSING"
+                        "text": "AVAILABLE"
                       }
                     },
                     "type": "value"
@@ -380,27 +377,27 @@
                       "value": null
                     },
                     {
-                      "color": "purple",
+                      "color": "dark-purple",
                       "value": 1
                     },
                     {
-                      "color": "dark-orange",
+                      "color": "purple",
                       "value": 2
                     },
                     {
-                      "color": "dark-yellow",
+                      "color": "dark-orange",
                       "value": 3
                     },
                     {
-                      "color": "dark-blue",
+                      "color": "dark-yellow",
                       "value": 4
                     },
                     {
-                      "color": "dark-green",
+                      "color": "dark-blue",
                       "value": 5
                     },
                     {
-                      "color": "dark-purple",
+                      "color": "dark-green",
                       "value": 6
                     }
                   ]
@@ -435,18 +432,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "GPU Model"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 200
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "GPUs"
             },
             "properties": [
@@ -457,17 +442,13 @@
               {
                 "id": "custom.align",
                 "value": "center"
-              },
-              {
-                "id": "custom.width",
-                "value": 70
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "Free GPUs"
+              "options": "Free"
             },
             "properties": [
               {
@@ -499,17 +480,13 @@
                     }
                   ]
                 }
-              },
-              {
-                "id": "custom.width",
-                "value": 90
               }
             ]
           },
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "/^(GPU Compute|VRAM Used|CPU|RAM)$/"
+              "options": "/^(GPU Util|VRAM|CPU|Memory)$/"
             },
             "properties": [
               {
@@ -533,17 +510,13 @@
                 "value": {
                   "type": "color-text"
                 }
-              },
-              {
-                "id": "custom.width",
-                "value": 86
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "GPU Compute"
+              "options": "GPU Util"
             },
             "properties": [
               {
@@ -571,7 +544,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "VRAM Used"
+              "options": "VRAM"
             },
             "properties": [
               {
@@ -627,7 +600,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "RAM"
+              "options": "Memory"
             },
             "properties": [
               {
@@ -691,10 +664,6 @@
                     }
                   ]
                 }
-              },
-              {
-                "id": "custom.width",
-                "value": 90
               }
             ]
           },
@@ -737,10 +706,6 @@
                     }
                   ]
                 }
-              },
-              {
-                "id": "custom.width",
-                "value": 90
               }
             ]
           }
@@ -750,7 +715,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 7
       },
       "id": 6,
       "options": {
@@ -775,7 +740,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "max by (server) (nml:server_status{server=~\"${server:regex}\"} or on (server) (1 * max by (server) (up{job=\"node-exporter\",gpu=\"false\",server=~\"${server:regex}\"})) or on (server) (6 * max by (server) (up{job=\"node-exporter\",server=~\"${server:regex}\"})) or on (server) (0 * max by (server) (max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h]))))",
+          "expr": "max by (server) (nml:server_status{server=~\"${server:regex}\"} or on (server) (2 * max by (server) (up{job=\"node-exporter\",gpu=\"false\",server=~\"${server:regex}\"})) or on (server) (1 * max by (server) (up{job=\"node-exporter\",server=~\"${server:regex}\"})) or on (server) (0 * max by (server) (max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h]))))",
           "format": "table",
           "instant": true,
           "range": false,
@@ -891,8 +856,8 @@
             },
             "indexByName": {
               "Value #A": 1,
-              "Value #B": 4,
-              "Value #C": 3,
+              "Value #B": 3,
+              "Value #C": 4,
               "Value #D": 5,
               "Value #E": 6,
               "Value #F": 7,
@@ -905,11 +870,11 @@
             "renameByName": {
               "Value #A": "Status",
               "Value #B": "GPUs",
-              "Value #C": "Free GPUs",
-              "Value #D": "GPU Compute",
-              "Value #E": "VRAM Used",
+              "Value #C": "Free",
+              "Value #D": "GPU Util",
+              "Value #E": "VRAM",
               "Value #F": "CPU",
-              "Value #G": "RAM",
+              "Value #G": "Memory",
               "Value #H": "GPU Temp",
               "Value #I": "CPU Temp",
               "modelName": "GPU Model",
@@ -948,7 +913,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "smooth",
+            "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 4,
             "scaleDistribution": {
@@ -956,13 +921,13 @@
             },
             "showPoints": "never",
             "showValues": false,
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "off"
+              "mode": "line"
             }
           },
           "max": 100,
@@ -973,6 +938,14 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 70
               }
             ]
           },
@@ -984,7 +957,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 19
       },
       "id": 7,
       "options": {
@@ -1009,7 +982,7 @@
           "refId": "A"
         }
       ],
-      "title": "GPU Utilization · Busiest GPU",
+      "title": "GPU Compute · Busiest GPU",
       "type": "timeseries"
     },
     {
@@ -1040,7 +1013,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "smooth",
+            "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 4,
             "scaleDistribution": {
@@ -1048,13 +1021,13 @@
             },
             "showPoints": "never",
             "showValues": false,
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "off"
+              "mode": "line"
             }
           },
           "max": 100,
@@ -1065,6 +1038,14 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 80
               }
             ]
           },
@@ -1076,7 +1057,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 18
+        "y": 19
       },
       "id": 8,
       "options": {
@@ -1132,7 +1113,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "smooth",
+            "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 4,
             "scaleDistribution": {
@@ -1140,13 +1121,13 @@
             },
             "showPoints": "never",
             "showValues": false,
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "off"
+              "mode": "line"
             }
           },
           "max": 100,
@@ -1157,6 +1138,14 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "orange",
+                "value": 25
+              },
+              {
+                "color": "red",
+                "value": 85
               }
             ]
           },
@@ -1168,7 +1157,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 27
+        "y": 28
       },
       "id": 9,
       "options": {
@@ -1224,7 +1213,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "smooth",
+            "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 4,
             "scaleDistribution": {
@@ -1232,13 +1221,13 @@
             },
             "showPoints": "never",
             "showValues": false,
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "off"
+              "mode": "line"
             }
           },
           "max": 100,
@@ -1249,6 +1238,14 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "orange",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
               }
             ]
           },
@@ -1260,7 +1257,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 27
+        "y": 28
       },
       "id": 10,
       "options": {
@@ -1318,7 +1315,7 @@
           "query": "label_values(up{job=\"node-exporter\"}, server)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "sort": 1,
         "type": "query"
       }
@@ -1347,5 +1344,5 @@
   "timezone": "browser",
   "title": "GPU Server Availability",
   "uid": "multi-server-overview",
-  "version": 8
+  "version": 10
 }
