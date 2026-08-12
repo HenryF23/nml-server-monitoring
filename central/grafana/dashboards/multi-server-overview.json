@@ -550,7 +550,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 120
+                "value": 145
               },
               {
                 "id": "thresholds",
@@ -678,7 +678,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 125
+                "value": 145
               },
               {
                 "id": "unit",
@@ -724,7 +724,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 125
+                "value": 145
               },
               {
                 "id": "unit",
