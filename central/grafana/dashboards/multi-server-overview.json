@@ -673,12 +673,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "GPU Temperature"
+              "options": "GPU Temp"
             },
             "properties": [
               {
                 "id": "custom.width",
-                "value": 145
+                "value": 95
               },
               {
                 "id": "unit",
@@ -719,12 +719,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "CPU Temperature"
+              "options": "CPU Temp"
             },
             "properties": [
               {
                 "id": "custom.width",
-                "value": 145
+                "value": 95
               },
               {
                 "id": "unit",
@@ -765,7 +765,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Max VRAM"
+              "options": "Total VRAM"
             },
             "properties": [
               {
@@ -889,7 +889,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "max by (server) ((DCGM_FI_DEV_FB_USED{server=~\"${server:regex}\"} + DCGM_FI_DEV_FB_FREE{server=~\"${server:regex}\"}) * 1024 * 1024)",
+          "expr": "sum by (server) ((DCGM_FI_DEV_FB_USED{server=~\"${server:regex}\"} + DCGM_FI_DEV_FB_FREE{server=~\"${server:regex}\"}) * 1024 * 1024)",
           "format": "table",
           "instant": true,
           "range": false,
@@ -962,11 +962,11 @@
               "Value #E": "VRAM",
               "Value #F": "CPU",
               "Value #G": "Memory",
-              "Value #H": "GPU Temperature",
-              "Value #I": "CPU Temperature",
+              "Value #H": "GPU Temp",
+              "Value #I": "CPU Temp",
               "modelName": "GPU Model",
               "server": "Server",
-              "Value #J": "Max VRAM"
+              "Value #J": "Total VRAM"
             }
           }
         }
