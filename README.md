@@ -68,6 +68,35 @@ Tailscale-preferred selection with `./setup-central.sh --auto-bind`. When you
 select a specific LAN interface, use that same address with
 `setup-node.sh --central-ip`; the central script prints the exact command.
 
+To make Prometheus and Grafana listen on every host IPv4 interface (for example,
+both LAN and Tailscale), use:
+
+```bash
+./setup-central.sh --bind-address 0.0.0.0
+```
+
+This saves `CENTRAL_BIND_ADDRESS=0.0.0.0`. It controls where the services
+**listen**; it does not choose the URL Grafana puts in generated links. Because
+TCP `9090` and `3000` are then reachable on every permitted interface, restrict
+them with your host/network firewall.
+
+For Grafana-generated share/external URLs, set the browser-facing root URL in
+`central/.env` to an address your viewers can actually reach:
+
+```bash
+GRAFANA_ROOT_URL=http://142.58.10.57:3000
+```
+
+and pass it to Grafana in `central/compose.yml` under `grafana.environment`:
+
+```yaml
+GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-}
+```
+
+`GRAFANA_ROOT_URL` only controls Grafana's advertised/generated URL; it does not
+change listener binding or network reachability. Recreate Grafana after changing
+it with `docker compose up -d --force-recreate grafana`.
+
 ## 2. Add a monitored server
 
 Copy `node/` to the server and use the central server's machine name:
