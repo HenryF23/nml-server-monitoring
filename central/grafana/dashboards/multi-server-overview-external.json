@@ -169,10 +169,22 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "dark-orange",
-            "mode": "fixed"
+            "mode": "thresholds"
           },
           "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
           "unit": "short"
         },
         "overrides": []
@@ -338,22 +350,22 @@
                         "text": "OFFLINE"
                       },
                       "1": {
-                        "color": "dark-purple",
+                        "color": "dark-yellow",
                         "index": 1,
                         "text": "METRICS MISSING"
                       },
                       "2": {
-                        "color": "purple",
+                        "color": "dark-gray",
                         "index": 2,
                         "text": "CPU ONLY"
                       },
                       "3": {
-                        "color": "dark-orange",
+                        "color": "purple",
                         "index": 3,
                         "text": "IN USE"
                       },
                       "4": {
-                        "color": "dark-yellow",
+                        "color": "dark-orange",
                         "index": 4,
                         "text": "CPU BUSY"
                       },
@@ -382,19 +394,19 @@
                       "value": null
                     },
                     {
-                      "color": "dark-purple",
+                      "color": "dark-yellow",
                       "value": 1
                     },
                     {
-                      "color": "purple",
+                      "color": "dark-gray",
                       "value": 2
                     },
                     {
-                      "color": "dark-orange",
+                      "color": "purple",
                       "value": 3
                     },
                     {
-                      "color": "dark-yellow",
+                      "color": "dark-orange",
                       "value": 4
                     },
                     {
@@ -562,11 +574,11 @@
                       "value": null
                     },
                     {
-                      "color": "orange",
+                      "color": "blue",
                       "value": 10
                     },
                     {
-                      "color": "red",
+                      "color": "purple",
                       "value": 70
                     }
                   ]
@@ -594,11 +606,11 @@
                       "value": null
                     },
                     {
-                      "color": "orange",
+                      "color": "blue",
                       "value": 10
                     },
                     {
-                      "color": "red",
+                      "color": "purple",
                       "value": 80
                     }
                   ]
@@ -982,7 +994,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic-by-name"
+            "mode": "palette-colorblind"
           },
           "custom": {
             "axisBorderShow": false,
@@ -993,7 +1005,7 @@
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 12,
+            "fillOpacity": 8,
             "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
@@ -1065,7 +1077,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic-by-name"
+            "mode": "palette-colorblind"
           },
           "custom": {
             "axisBorderShow": false,
@@ -1076,7 +1088,7 @@
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 12,
+            "fillOpacity": 8,
             "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
@@ -1148,7 +1160,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic-by-name"
+            "mode": "palette-colorblind"
           },
           "custom": {
             "axisBorderShow": false,
@@ -1159,7 +1171,7 @@
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 12,
+            "fillOpacity": 8,
             "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
@@ -1231,7 +1243,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic-by-name"
+            "mode": "palette-colorblind"
           },
           "custom": {
             "axisBorderShow": false,
@@ -1242,7 +1254,7 @@
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 12,
+            "fillOpacity": 8,
             "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
@@ -1340,5 +1352,5 @@
   "timezone": "browser",
   "title": "GPU Server Availability \u00b7 External",
   "uid": "multi-server-overview-external",
-  "version": 3
+  "version": 4
 }

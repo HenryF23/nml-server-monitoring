@@ -59,22 +59,22 @@
                   "text": "OFFLINE"
                 },
                 "1": {
-                  "color": "dark-purple",
+                  "color": "dark-yellow",
                   "index": 1,
                   "text": "METRICS MISSING"
                 },
                 "2": {
-                  "color": "purple",
+                  "color": "dark-gray",
                   "index": 2,
                   "text": "CPU ONLY"
                 },
                 "3": {
-                  "color": "dark-orange",
+                  "color": "purple",
                   "index": 3,
                   "text": "IN USE"
                 },
                 "4": {
-                  "color": "dark-yellow",
+                  "color": "dark-orange",
                   "index": 4,
                   "text": "CPU BUSY"
                 },
@@ -100,19 +100,19 @@
                 "value": null
               },
               {
-                "color": "dark-purple",
+                "color": "dark-yellow",
                 "value": 1
               },
               {
-                "color": "purple",
+                "color": "dark-gray",
                 "value": 2
               },
               {
-                "color": "dark-orange",
+                "color": "purple",
                 "value": 3
               },
               {
-                "color": "dark-yellow",
+                "color": "dark-orange",
                 "value": 4
               },
               {
@@ -300,15 +300,15 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "dark-green",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "dark-orange",
+                "color": "blue",
                 "value": 10
               },
               {
-                "color": "dark-red",
+                "color": "purple",
                 "value": 70
               }
             ]
@@ -370,15 +370,15 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "dark-green",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "dark-orange",
+                "color": "blue",
                 "value": 10
               },
               {
-                "color": "dark-red",
+                "color": "purple",
                 "value": 80
               }
             ]
@@ -540,7 +540,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "/^(Util|VRAM)$/"
+              "options": "/^(GPU Util|VRAM)$/"
             },
             "properties": [
               {
@@ -571,7 +571,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Util"
+              "options": "GPU Util"
             },
             "properties": [
               {
@@ -584,11 +584,11 @@
                       "value": null
                     },
                     {
-                      "color": "orange",
+                      "color": "blue",
                       "value": 10
                     },
                     {
-                      "color": "red",
+                      "color": "purple",
                       "value": 70
                     }
                   ]
@@ -612,11 +612,11 @@
                       "value": null
                     },
                     {
-                      "color": "orange",
+                      "color": "blue",
                       "value": 10
                     },
                     {
-                      "color": "red",
+                      "color": "purple",
                       "value": 80
                     }
                   ]
@@ -824,7 +824,7 @@
               "modelName": 1
             },
             "renameByName": {
-              "Value #A": "Util",
+              "Value #A": "GPU Util",
               "Value #B": "VRAM",
               "Value #C": "Temp",
               "Value #D": "Power",
@@ -855,8 +855,8 @@
             "axisColorMode": "text",
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
+            "fillOpacity": 5,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -926,8 +926,8 @@
             "axisColorMode": "text",
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
+            "fillOpacity": 5,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -996,8 +996,8 @@
             "axisColorMode": "text",
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
+            "fillOpacity": 5,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -1066,8 +1066,8 @@
             "axisColorMode": "text",
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
+            "fillOpacity": 5,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -1136,7 +1136,7 @@
             "axisColorMode": "text",
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "fillOpacity": 6,
+            "fillOpacity": 8,
             "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
@@ -1207,7 +1207,7 @@
             "axisColorMode": "text",
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "fillOpacity": 6,
+            "fillOpacity": 8,
             "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
@@ -1275,7 +1275,7 @@
             "axisColorMode": "text",
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "fillOpacity": 6,
+            "fillOpacity": 8,
             "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
@@ -1331,7 +1331,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Top 12 running application containers ranked by five-minute CPU use, with memory shown for the same containers. Infrastructure containers without an image label are excluded.",
+      "description": "Top 12 running application containers ranked by five-minute CPU use, with memory shown for the same containers. Infrastructure containers without an image label are excluded. Container CPU is expressed in CPU-core equivalents: approximately 100% represents one fully utilized logical CPU, so multi-threaded containers may exceed 100%.",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -1539,5 +1539,5 @@
   "timezone": "browser",
   "title": "Server Details",
   "uid": "nml-server-detail",
-  "version": 8
+  "version": 9
 }
