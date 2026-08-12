@@ -12,7 +12,7 @@
       "asDropdown": false,
       "icon": "arrow-left",
       "includeVars": false,
-      "keepTime": true,
+      "keepTime": false,
       "tags": [],
       "targetBlank": false,
       "title": "All servers",
@@ -32,7 +32,7 @@
       },
       "id": 1,
       "options": {
-        "content": "## ${server:text}\n[← Return to all servers](/d/multi-server-overview/gpu-server-availability?from=${__from}&to=${__to}) · Use the **Server** selector above to switch machines.",
+        "content": "## ${server:text}\n[← Return to all servers](/d/multi-server-overview/gpu-server-availability?from=now-24h&to=now) · Use the **Server** selector above to switch machines.",
         "mode": "markdown"
       },
       "title": "",
@@ -346,7 +346,7 @@
           "refId": "A"
         }
       ],
-      "title": "GPU Compute",
+      "title": "GPU",
       "type": "stat"
     },
     {
@@ -806,7 +806,7 @@
               "Value #B": "VRAM",
               "Value #C": "Temperature",
               "Value #D": "Power",
-              "Value #E": "VRAM Used",
+              "Value #E": "VRAM ",
               "Value #F": "VRAM Free",
               "gpu": "GPU",
               "modelName": "Model"
@@ -1482,7 +1482,7 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-24h",
     "to": "now"
   },
   "timepicker": {
@@ -1504,5 +1504,5 @@
   "timezone": "browser",
   "title": "Server Details",
   "uid": "nml-server-detail",
-  "version": 3
+  "version": 4
 }

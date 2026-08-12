@@ -165,7 +165,8 @@ cd central
 ```
 
 Open Grafana at `http://<central-host>:3000`, then select
-**NML → GPU Server Availability**.
+**NML → GPU Server Availability**. Both dashboards and their navigation links
+use the latest 24 hours.
 
 The first screen is designed for choosing a server:
 

@@ -426,7 +426,7 @@
                   {
                     "targetBlank": false,
                     "title": "${__value.text}",
-                    "url": "/d/nml-server-detail/server-details?var-server=${__value.raw}&from=${__from}&to=${__to}"
+                    "url": "/d/nml-server-detail/server-details?var-server=${__value.raw}&from=now-24h&to=now"
                   }
                 ]
               }
@@ -775,7 +775,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "nml:server_status{server=~\"${server:regex}\"} or on (server) (1 * max by (server) (up{job=\"node-exporter\",gpu=\"false\",server=~\"${server:regex}\"})) or on (server) (6 * max by (server) (up{job=\"node-exporter\",server=~\"${server:regex}\"})) or on (server) (0 * max by (server) (max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h])))",
+          "expr": "max by (server) (nml:server_status{server=~\"${server:regex}\"} or on (server) (1 * max by (server) (up{job=\"node-exporter\",gpu=\"false\",server=~\"${server:regex}\"})) or on (server) (6 * max by (server) (up{job=\"node-exporter\",server=~\"${server:regex}\"})) or on (server) (0 * max by (server) (max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h]))))",
           "format": "table",
           "instant": true,
           "range": false,
@@ -791,7 +791,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "nml:server_free_gpu_count{server=~\"${server:regex}\"}",
+          "expr": "max by (server) (nml:server_free_gpu_count{server=~\"${server:regex}\"})",
           "format": "table",
           "instant": true,
           "range": false,
@@ -815,7 +815,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "nml:server_cpu_usage_percent{server=~\"${server:regex}\"}",
+          "expr": "max by (server) (nml:server_cpu_usage_percent{server=~\"${server:regex}\"})",
           "format": "table",
           "instant": true,
           "range": false,
@@ -839,7 +839,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "nml:server_cpu_temperature_celsius{server=~\"${server:regex}\"}",
+          "expr": "max by (server) (nml:server_cpu_temperature_celsius{server=~\"${server:regex}\"})",
           "format": "table",
           "instant": true,
           "range": false,
@@ -853,6 +853,26 @@
           "options": {
             "byField": "server",
             "mode": "outerTabular"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "server",
+                "modelName",
+                "Value #A",
+                "Value #B",
+                "Value #C",
+                "Value #D",
+                "Value #E",
+                "Value #F",
+                "Value #G",
+                "Value #H",
+                "Value #I"
+              ]
+            }
           }
         },
         {
@@ -1305,7 +1325,7 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-24h",
     "to": "now"
   },
   "timepicker": {
@@ -1327,5 +1347,5 @@
   "timezone": "browser",
   "title": "GPU Server Availability",
   "uid": "multi-server-overview",
-  "version": 7
+  "version": 8
 }
