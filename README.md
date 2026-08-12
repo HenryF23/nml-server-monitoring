@@ -141,8 +141,14 @@ The first screen is designed for choosing a server:
   no longer arriving.
 
 The server table shows GPU model and count, free GPUs, GPU and VRAM use, CPU,
-RAM, temperature, and root-disk use. Use the **Servers** filter for focused
-history charts.
+RAM, temperature, and root-disk use. The **Servers** selector filters every
+overview panel and supports one or several servers.
+
+Click a server name in the table to open **Server Details** with the current
+time range preserved. That view shows per-GPU inventory, compute, VRAM,
+temperature and power history, host CPU/RAM/disk history, and the busiest
+application containers. Its **Server** selector switches directly between
+machines.
 
 ## Network and security
 
