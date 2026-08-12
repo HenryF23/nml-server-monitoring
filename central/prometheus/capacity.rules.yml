@@ -1,0 +1,21 @@
+groups:
+  - name: nml-capacity
+    interval: 15s
+    rules:
+      - record: nml:server_cpu_usage_percent
+        expr: 100 - avg by (server) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100
+
+      - record: nml:gpu_utilization_percent
+        expr: avg_over_time(DCGM_FI_DEV_GPU_UTIL[5m])
+
+      - record: nml:gpu_vram_usage_percent
+        expr: 100 * avg_over_time(DCGM_FI_DEV_FB_USED[5m]) / (avg_over_time(DCGM_FI_DEV_FB_USED[5m]) + avg_over_time(DCGM_FI_DEV_FB_FREE[5m]))
+
+      - record: nml:server_gpu_count
+        expr: count by (server) (DCGM_FI_DEV_GPU_UTIL)
+
+      - record: nml:server_free_gpu_count
+        expr: count by (server) ((nml:gpu_utilization_percent < 10) and on (server, gpu) (nml:gpu_vram_usage_percent < 10)) or on (server) (0 * nml:server_gpu_count)
+
+      - record: nml:server_available
+        expr: (nml:server_free_gpu_count == bool nml:server_gpu_count) * on (server) (nml:server_cpu_usage_percent < bool 25) * on (server) (nml:server_gpu_count > bool 0)

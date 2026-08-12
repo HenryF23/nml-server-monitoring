@@ -66,8 +66,12 @@ ok "Compose configuration is valid."
 info "Pulling container images..."
 docker compose pull
 
+info "Validating Prometheus configuration and capacity rules..."
+docker compose run --rm --no-deps --entrypoint /bin/promtool prometheus \
+    check config /etc/prometheus/prometheus.yml >/dev/null
+
 info "Starting Prometheus and Grafana on the Tailscale interface..."
-docker compose up -d --remove-orphans
+docker compose up -d --remove-orphans --force-recreate
 
 echo
 docker compose ps

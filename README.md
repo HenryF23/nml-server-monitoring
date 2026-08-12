@@ -47,7 +47,22 @@ Copy `node/` to the server and use the central Tailscale IP printed above:
 
 ```bash
 cd node
-sudo ./setup-node.sh --central-ip 100.x.y.z
+sudo ./setup-node.sh \
+  --central-ip 100.x.y.z \
+  --name "$(hostname -s)"
+```
+
+`--name` is optional: setup already uses `hostname -s` automatically. It is
+shown above to make the resolved server name explicit.
+
+If the central server also monitors itself, resolve both its Tailscale IP and
+server name automatically:
+
+```bash
+cd node
+sudo ./setup-node.sh \
+  --central-ip "$(tailscale ip -4)" \
+  --name "$(hostname -s)"
 ```
 
 The short hostname is used as the Grafana server label. Override it when
@@ -65,17 +80,8 @@ sudo ./setup-node.sh
 
 New servers normally appear in Grafana within 30 seconds.
 
-### Monitor the central server too
-
-Yes—the two stacks can run on the same host. After central setup, run node
-setup with that same host's Tailscale IP:
-
-```bash
-cd node
-sudo ./setup-node.sh --central-ip 100.x.y.z
-```
-
-Their ports do not overlap.
+The central and node stacks can run on the same host; their ports do not
+overlap.
 
 ### CPU-only exception
 
@@ -108,7 +114,20 @@ cd central
 ```
 
 Open Grafana at `http://<central-tailscale-ip>:3000`, then select
-**Infrastructure → Multi-Server Overview**.
+**NML → GPU Server Availability**.
+
+The first screen is designed for choosing a server:
+
+- **Available** means the server is online, host CPU usage is below 25%, and
+  every GPU has averaged below 10% compute and 10% VRAM usage for five minutes.
+- **Free GPUs** counts individual GPUs below both GPU thresholds.
+- **Busy** means the server is online but does not meet the availability rule.
+- **Offline** includes servers seen during the last 24 hours whose metrics are
+  no longer arriving.
+
+The server table shows GPU model and count, free GPUs, GPU and VRAM use, CPU,
+RAM, temperature, and root-disk use. Use the **Servers** filter for focused
+history charts.
 
 ## Network and security
 
@@ -139,7 +158,7 @@ combinations.
 
 ```bash
 # Update central containers
-cd central && docker compose pull && docker compose up -d --remove-orphans
+cd central && ./setup-central.sh
 
 # Update a GPU node
 cd node && sudo ./setup-node.sh
