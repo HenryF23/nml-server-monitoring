@@ -252,10 +252,9 @@ application containers. Its **Server** selector switches directly between
 machines.
 
 **GPU Server Availability · External** is the unfiltered overview intended for
-shared displays that should not expose navigation controls. It omits the server
-selector and drill-down links but still requires Grafana authentication; this
-stack does not enable iframe embedding. Use the main overview for interactive
-investigation.
+shared displays. It mirrors the main overview, including server drill-down
+links, but omits the server selector and shows every server. It still requires
+Grafana authentication; this stack does not enable iframe embedding.
 
 ## Network and security
 

@@ -419,6 +419,22 @@
               {
                 "id": "custom.width",
                 "value": 220
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "data-links"
+                }
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": false,
+                    "title": "${__value.text}",
+                    "url": "/d/nml-server-detail/server-details?var-server=${__value.raw}&from=now-3h&to=now"
+                  }
+                ]
               }
             ]
           },
@@ -1324,5 +1340,5 @@
   "timezone": "browser",
   "title": "GPU Server Availability \u00b7 External",
   "uid": "multi-server-overview-external",
-  "version": 2
+  "version": 3
 }

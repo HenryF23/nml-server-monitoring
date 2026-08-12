@@ -32,7 +32,7 @@
       },
       "id": 1,
       "options": {
-        "content": "## ${server:text}\nGPU, host, and container telemetry",
+        "content": "## ${server:text}\nGPU capacity, host resources, and active container telemetry",
         "mode": "markdown"
       },
       "title": "",
@@ -497,7 +497,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "One row per GPU. Compute and VRAM are five-minute averages; temperature and power are current readings.",
+      "description": "Compute utilization and VRAM allocation are five-minute averages. Temperature and power are current readings.",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -847,7 +847,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic-by-name"
+            "mode": "palette-colorblind"
           },
           "custom": {
             "axisBorderShow": false,
@@ -855,8 +855,8 @@
             "axisColorMode": "text",
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "opacity",
+            "fillOpacity": 0,
+            "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -918,7 +918,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic-by-name"
+            "mode": "palette-colorblind"
           },
           "custom": {
             "axisBorderShow": false,
@@ -926,8 +926,8 @@
             "axisColorMode": "text",
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "opacity",
+            "fillOpacity": 0,
+            "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -988,7 +988,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic-by-name"
+            "mode": "palette-colorblind"
           },
           "custom": {
             "axisBorderShow": false,
@@ -996,8 +996,8 @@
             "axisColorMode": "text",
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "fillOpacity": 8,
-            "gradientMode": "opacity",
+            "fillOpacity": 0,
+            "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -1058,7 +1058,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic-by-name"
+            "mode": "palette-colorblind"
           },
           "custom": {
             "axisBorderShow": false,
@@ -1066,8 +1066,8 @@
             "axisColorMode": "text",
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "fillOpacity": 8,
-            "gradientMode": "opacity",
+            "fillOpacity": 0,
+            "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -1136,7 +1136,7 @@
             "axisColorMode": "text",
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "fillOpacity": 12,
+            "fillOpacity": 6,
             "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
@@ -1207,7 +1207,7 @@
             "axisColorMode": "text",
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "fillOpacity": 12,
+            "fillOpacity": 6,
             "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
@@ -1275,7 +1275,7 @@
             "axisColorMode": "text",
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "fillOpacity": 12,
+            "fillOpacity": 6,
             "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
@@ -1539,5 +1539,5 @@
   "timezone": "browser",
   "title": "Server Details",
   "uid": "nml-server-detail",
-  "version": 7
+  "version": 8
 }
