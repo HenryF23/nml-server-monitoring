@@ -3,29 +3,27 @@ global:
   scrape_timeout: 10s
   external_labels:
     server: "${SERVER_NAME}"
+    tailscale_ip: "${TAILSCALE_IP}"
     gpu: "__GPU_ENABLED__"
 
 scrape_configs:
   - job_name: prometheus-agent
     static_configs:
       - targets:
-          - localhost:9090
+          - 127.0.0.1:9095
 
   - job_name: node-exporter
     static_configs:
       - targets:
-          - node-exporter:9100
+          - 127.0.0.1:9100
 
   - job_name: cadvisor
     static_configs:
       - targets:
-          - cadvisor:8080
+          - 127.0.0.1:18080
 
   # GPU_SCRAPE_JOB
 
 remote_write:
   - name: central
-    url: "__REMOTE_WRITE_URL__"
-    authorization:
-      type: Bearer
-      credentials_file: /run/secrets/monitoring_token
+    url: "http://__CENTRAL_TAILSCALE_IP__:9090/api/v1/write"

@@ -2,9 +2,21 @@
 set -Eeuo pipefail
 cd "$(dirname "$0")"
 
-prometheus_port="$(grep -m1 '^PROMETHEUS_PORT=' .env 2>/dev/null | cut -d= -f2- || true)"
-prometheus_port="${prometheus_port:-9090}"
-api="http://127.0.0.1:${prometheus_port}/api/v1/query"
+read_env() {
+    local key="$1"
+    grep -m1 -E "^${key}=" .env 2>/dev/null | cut -d= -f2- || true
+}
+
+tailscale_ip="$(read_env TAILSCALE_IP)"
+if [[ -z "$tailscale_ip" ]] && command -v tailscale >/dev/null 2>&1; then
+    tailscale_ip="$(tailscale ip -4 2>/dev/null | head -n1)"
+fi
+[[ -n "$tailscale_ip" ]] || {
+    echo "TAILSCALE_IP is missing. Run ./setup-central.sh first."
+    exit 1
+}
+
+api="http://${tailscale_ip}:9090/api/v1/query"
 query='up{job=~"prometheus-agent|node-exporter|cadvisor|dcgm-exporter"}'
 
 echo "=== Docker services ==="
@@ -13,12 +25,12 @@ docker compose ps
 echo
 echo "=== Metrics currently arriving from monitored servers ==="
 command -v curl >/dev/null 2>&1 || {
-    echo "curl is required to query the local Prometheus API."
+    echo "curl is required to query the Prometheus API."
     exit 1
 }
 
 if ! payload="$(curl -fsS --get --data-urlencode "query=$query" "$api")"; then
-    echo "Prometheus API is not reachable on localhost:${prometheus_port}."
+    echo "Prometheus is not reachable at ${tailscale_ip}:9090."
     exit 1
 fi
 

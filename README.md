@@ -1,36 +1,34 @@
-# Multi-server monitoring with Docker
+# Multi-server GPU monitoring
 
-A central Docker stack stores and displays metrics from any number of
-servers. GPU monitoring is enabled by default. Each GPU server runs four
-containers:
+Dockerized monitoring for servers connected to one Tailscale network. Adding a
+server does not require editing the central Prometheus configuration or
+restarting it.
 
-- Node Exporter for host metrics
-- cAdvisor for Docker container metrics
-- NVIDIA DCGM Exporter for GPU metrics
-- Prometheus Agent to send everything to the central server
-
-Adding a server requires one command on that server. There is no central target
-list to edit and no Prometheus restart.
+Each monitored server runs Node Exporter, cAdvisor, NVIDIA DCGM Exporter, and a
+Prometheus Agent. The agent sends metrics over Tailscale to central Prometheus;
+Grafana displays them automatically.
 
 ```text
-GPU server                                      central server
-┌──────────────────────────────┐                ┌──────────────────────┐
-│ Node Exporter ─┐             │                │ authenticated        │
-│ cAdvisor ──────┼─ Prometheus Agent ─────────► │ gateway              │
-│ DCGM Exporter ─┘             │  remote write  │   └─ Prometheus      │
-└──────────────────────────────┘                │       └─ Grafana     │
-                                                └──────────────────────┘
+monitored server                         central server
+Node Exporter ─┐                        Prometheus ── Grafana
+cAdvisor ──────┼─ Prometheus Agent ───► 100.x.y.z
+DCGM Exporter ─┘       Tailscale
 ```
+
+The stacks use Docker host networking, so Docker Compose creates no bridge
+networks and allocates no private subnets. Central services bind only to the
+central Tailscale IP. Node collectors bind only to host loopback.
 
 ## Requirements
 
-All servers need Docker Engine and Docker Compose v2.
+Every server needs:
 
-GPU servers must also have:
+- Linux with Docker Engine and Docker Compose v2
+- Tailscale, connected to the same tailnet (`tailscale ip -4` must work)
+- access through Tailscale to TCP `9090` on the central server
 
-- a working NVIDIA driver (`nvidia-smi` must succeed);
-- NVIDIA Container Toolkit configured for Docker;
-- network access to TCP `9091` on the central server.
+GPU monitoring is the default. GPU servers also need a working NVIDIA driver
+and NVIDIA Container Toolkit configured for Docker.
 
 ## 1. Start the central server
 
@@ -39,59 +37,56 @@ cd central
 ./setup-central.sh
 ```
 
-This starts Prometheus, Grafana, and the authenticated metrics gateway. It also
-generates the Grafana password and monitoring token in `central/.env`.
+The script detects the central server's Tailscale IPv4 address, starts
+Prometheus and Grafana on that interface, and prints the exact node setup
+command. It generates the Grafana administrator password in `central/.env`.
 
-The final output contains the command to run on every server. Replace the
-hostname with the central server's private IP or VPN hostname when necessary.
+## 2. Add a monitored server
 
-## 2. Add a server
-
-Copy `node/` to the server and run the command printed by central setup:
+Copy `node/` to the server and use the central Tailscale IP printed above:
 
 ```bash
 cd node
-sudo ./setup-node.sh \
-  --central-url http://10.0.0.10:9091/api/v1/write \
-  --token TOKEN_FROM_CENTRAL
+sudo ./setup-node.sh --central-ip 100.x.y.z
 ```
 
-The short hostname becomes the server name in Grafana. It must be unique. To
-set it explicitly:
+The short hostname is used as the Grafana server label. Override it when
+needed:
 
 ```bash
-sudo ./setup-node.sh \
-  --central-url http://10.0.0.10:9091/api/v1/write \
-  --token TOKEN_FROM_CENTRAL \
-  --name gpu-server-01
+sudo ./setup-node.sh --central-ip 100.x.y.z --name gpu-server-01
 ```
 
-The URL and token are saved locally. Future updates only require:
+The central IP is saved in `node/.env`, so later GPU-node updates need only:
 
 ```bash
 sudo ./setup-node.sh
 ```
 
-New servers appear automatically in Grafana within about 30 seconds.
+New servers normally appear in Grafana within 30 seconds.
+
+### Monitor the central server too
+
+Yes—the two stacks can run on the same host. After central setup, run node
+setup with that same host's Tailscale IP:
+
+```bash
+cd node
+sudo ./setup-node.sh --central-ip 100.x.y.z
+```
+
+Their ports do not overlap.
 
 ### CPU-only exception
 
-Setup expects a working GPU by default. It stops with a clear error when the
-NVIDIA driver, GPU access, or NVIDIA Container Toolkit is unavailable. If the
-server intentionally has no GPU, opt out explicitly:
+Setup stops with a clear error if an NVIDIA GPU, driver, or container runtime
+is unavailable. Only for an intentionally CPU-only server, use:
 
 ```bash
-sudo ./setup-node.sh \
-  --central-url http://10.0.0.10:9091/api/v1/write \
-  --token TOKEN_FROM_CENTRAL \
-  --cpu-only
+sudo ./setup-node.sh --central-ip 100.x.y.z --cpu-only
 ```
 
-On later CPU-only updates, continue passing the flag:
-
-```bash
-sudo ./setup-node.sh --cpu-only
-```
+Continue passing `--cpu-only` on later updates.
 
 ## Verify
 
@@ -102,8 +97,8 @@ cd node
 ./verify-node.sh
 ```
 
-GPU servers should report four `UP` targets. CPU-only servers should report
-three; DCGM Exporter is not started or scraped.
+A GPU server should report four `UP` targets. A CPU-only server should report
+three.
 
 On the central server:
 
@@ -112,68 +107,67 @@ cd central
 ./status.sh
 ```
 
-Grafana is available at `http://<central-server>:3000`. Open
-**Infrastructure → Multi-Server Overview** and use the **Server** selector.
+Open Grafana at `http://<central-tailscale-ip>:3000`, then select
+**Infrastructure → Multi-Server Overview**.
 
-## Network exposure
+## Network and security
 
-The central server exposes:
+No Caddy proxy or application token is used. Tailscale supplies encrypted,
+authenticated transport. Configure Tailscale access controls so monitored
+servers can reach central TCP `9090`, and only administrators can reach TCP
+`3000`.
 
-- `3000/tcp`: Grafana
-- `9091/tcp`: authenticated metric ingestion
-- `9090/tcp`: Prometheus, bound to localhost by default
+| Listener | Binding | Purpose |
+|---|---|---|
+| `9090/tcp` | central Tailscale IP | Prometheus API and remote write |
+| `3000/tcp` | central Tailscale IP | Grafana |
+| `9095/tcp` | node `127.0.0.1` | Prometheus Agent status |
+| `9100/tcp` | node `127.0.0.1` | Node Exporter |
+| `18080/tcp` | node `127.0.0.1` | cAdvisor |
+| `9400/tcp` | node `127.0.0.1` | DCGM Exporter |
 
-Monitored servers expose no exporter ports. Their Prometheus Agent status page
-is available only at `http://127.0.0.1:9095/targets`.
+Because this project creates no Docker networks, it does not consume an
+address from Docker's `default-address-pools` and cannot trigger the Compose
+subnet exhaustion seen with a single `/24` pool. Other Docker research projects
+can still create bridge networks and must follow your site's address-pool rule.
 
-The ingestion endpoint uses a bearer token but plain HTTP by default. Keep port
-`9091` on a trusted LAN or VPN. Use an HTTPS reverse proxy when metrics cross
-an untrusted network.
-
-Generated secrets and node configuration are excluded from Git:
-
-- `central/.env`
-- `node/.env`
-- `node/.monitoring-token`
-- `node/prometheus/agent.yml`
+Host networking also means the listed host ports must be free. Existing Nginx
+is unaffected unless it already listens on one of those exact address/port
+combinations.
 
 ## Common commands
 
 ```bash
 # Update central containers
-cd central && docker compose pull && docker compose up -d
+cd central && docker compose pull && docker compose up -d --remove-orphans
 
-# Update a monitored server
+# Update a GPU node
 cd node && sudo ./setup-node.sh
 
-# Update a CPU-only server
+# Update a CPU-only node
 cd node && sudo ./setup-node.sh --cpu-only
 
-# Stop monitoring a server
-cd node && sudo docker compose down
+# Stop a node stack
+cd node && sudo docker compose --profile gpu down
 ```
 
-Container versions and ports can be changed in the generated `.env` files.
-Prometheus retention defaults to 30 days.
+Prometheus retention defaults to 30 days. Image versions, retention, and the
+Grafana port can be changed in the generated `.env` files.
 
 ## Remove old host installations
 
 The Docker setup does not need host-installed Prometheus, exporters, or
-Grafana. Two cleanup scripts are included for Debian and Ubuntu:
+Grafana. Cleanup scripts are included for Debian and Ubuntu:
 
 ```bash
-# Preview only; no changes
+# Preview only
 ./scripts/cleanup-monitoring.sh --dry-run
 ./scripts/cleanup-grafana.sh --dry-run
 
-# Perform the cleanup after reviewing the preview
+# Remove after reviewing the preview
 sudo ./scripts/cleanup-monitoring.sh
 sudo ./scripts/cleanup-grafana.sh
 ```
 
-Root is not required for a preview, although `sudo --dry-run` provides complete
-process visibility. Without `--yes`, each destructive run requires typing
-`REMOVE`. These scripts
-purge the matching host packages and remove their host configuration, data,
-logs, and manual-install files. They never remove Docker containers, images,
-networks, volumes, NVIDIA drivers, CUDA, or NVIDIA Container Toolkit.
+Without `--yes`, each destructive run requires typing `REMOVE`. The scripts do
+not remove Docker resources, NVIDIA drivers, CUDA, or NVIDIA Container Toolkit.

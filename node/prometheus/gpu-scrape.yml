@@ -1,4 +1,4 @@
   - job_name: dcgm-exporter
     static_configs:
       - targets:
-          - dcgm-exporter:9400
+          - 127.0.0.1:9400

@@ -3,8 +3,6 @@ global:
   scrape_timeout: 10s
   evaluation_interval: 15s
 
-scrape_configs:
-  - job_name: prometheus
-    static_configs:
-      - targets:
-          - localhost:9090
+# Monitored servers push through the remote-write receiver. Run node/setup-node.sh
+# on this host as well when the central server itself should be monitored.
+scrape_configs: []

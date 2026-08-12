@@ -2,8 +2,7 @@
 set -Eeuo pipefail
 cd "$(dirname "$0")"
 
-agent_port="$(grep -m1 '^PROMETHEUS_AGENT_PORT=' .env 2>/dev/null | cut -d= -f2- || true)"
-agent_port="${agent_port:-9095}"
+agent_port=9095
 api="http://127.0.0.1:${agent_port}/api/v1/targets?state=active"
 
 echo "=== Docker services ==="

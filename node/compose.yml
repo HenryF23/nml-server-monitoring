@@ -5,14 +5,17 @@ services:
     image: quay.io/prometheus/node-exporter:${NODE_EXPORTER_VERSION:-v1.12.1}
     restart: unless-stopped
     pid: host
+    network_mode: host
     command:
       - --path.rootfs=/host
+      - --web.listen-address=127.0.0.1:9100
     volumes:
       - /:/host:ro,rslave
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:${CADVISOR_VERSION:-v0.60.5}
     restart: unless-stopped
+    network_mode: host
     privileged: true
     devices:
       - /dev/kmsg:/dev/kmsg
@@ -22,22 +25,29 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
       - /dev/disk:/dev/disk:ro
+    command:
+      - --listen_ip=127.0.0.1
+      - --port=18080
 
   dcgm-exporter:
     image: nvcr.io/nvidia/k8s/dcgm-exporter:${DCGM_EXPORTER_TAG:-latest}
     restart: unless-stopped
     profiles:
       - gpu
+    network_mode: host
     cap_add:
       - SYS_ADMIN
     gpus: all
+    environment:
+      DCGM_EXPORTER_LISTEN: 127.0.0.1:9400
 
-  # Agent mode scrapes the exporters over this private Compose network and
-  # forwards every sample to the central Prometheus server.
+  # All collectors share the host network but listen only on loopback. The
+  # agent is the only component that talks to another server, over Tailscale.
   prometheus-agent:
     image: prom/prometheus:${PROMETHEUS_VERSION:-v3.13.2}
     restart: unless-stopped
     user: "65534:65534"
+    network_mode: host
     depends_on:
       - node-exporter
       - cadvisor
@@ -45,15 +55,12 @@ services:
       - --agent
       - --config.file=/etc/prometheus/agent.yml
       - --storage.agent.path=/prometheus
-      - --web.listen-address=0.0.0.0:9090
+      - --web.listen-address=127.0.0.1:9095
     environment:
       SERVER_NAME: ${SERVER_NAME:?Run setup-node.sh first}
-    ports:
-      # Agent health/target UI is available only from the monitored host.
-      - "127.0.0.1:${PROMETHEUS_AGENT_PORT:-9095}:9090"
+      TAILSCALE_IP: ${TAILSCALE_IP:?Run setup-node.sh first}
     volumes:
       - ./prometheus/agent.yml:/etc/prometheus/agent.yml:ro
-      - ./.monitoring-token:/run/secrets/monitoring_token:ro
       - prometheus_agent_data:/prometheus
 
 volumes:
