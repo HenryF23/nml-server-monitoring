@@ -291,7 +291,8 @@
             "cellOptions": {
               "type": "auto"
             },
-            "inspect": false
+            "inspect": false,
+            "minWidth": 60
           },
           "mappings": [],
           "noValue": "N/A",
@@ -312,6 +313,10 @@
               "options": "Status"
             },
             "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
               {
                 "id": "custom.align",
                 "value": "center"
@@ -412,6 +417,10 @@
             },
             "properties": [
               {
+                "id": "custom.width",
+                "value": 220
+              },
+              {
                 "id": "custom.cellOptions",
                 "value": {
                   "type": "data-links"
@@ -432,9 +441,25 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "GPU Model"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 210
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "GPUs"
             },
             "properties": [
+              {
+                "id": "custom.width",
+                "value": 65
+              },
               {
                 "id": "decimals",
                 "value": 0
@@ -451,6 +476,10 @@
               "options": "Free"
             },
             "properties": [
+              {
+                "id": "custom.width",
+                "value": 65
+              },
               {
                 "id": "decimals",
                 "value": 0
@@ -520,6 +549,10 @@
             },
             "properties": [
               {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
                 "id": "thresholds",
                 "value": {
                   "mode": "absolute",
@@ -547,6 +580,10 @@
               "options": "VRAM"
             },
             "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
               {
                 "id": "thresholds",
                 "value": {
@@ -576,6 +613,10 @@
             },
             "properties": [
               {
+                "id": "custom.width",
+                "value": 75
+              },
+              {
                 "id": "thresholds",
                 "value": {
                   "mode": "absolute",
@@ -604,6 +645,10 @@
             },
             "properties": [
               {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
                 "id": "thresholds",
                 "value": {
                   "mode": "absolute",
@@ -631,6 +676,10 @@
               "options": "GPU Temp"
             },
             "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
               {
                 "id": "unit",
                 "value": "celsius"
@@ -673,6 +722,10 @@
               "options": "CPU Temp"
             },
             "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
               {
                 "id": "unit",
                 "value": "celsius"
@@ -1344,5 +1397,5 @@
   "timezone": "browser",
   "title": "GPU Server Availability",
   "uid": "multi-server-overview",
-  "version": 10
+  "version": 11
 }
