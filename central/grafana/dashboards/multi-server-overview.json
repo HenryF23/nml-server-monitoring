@@ -761,6 +761,30 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max VRAM"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 105
+              },
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
           }
         ]
       },
@@ -862,6 +886,14 @@
           "instant": true,
           "range": false,
           "refId": "I"
+        },
+        {
+          "editorMode": "code",
+          "expr": "max by (server) ((DCGM_FI_DEV_FB_USED{server=~\"${server:regex}\"} + DCGM_FI_DEV_FB_FREE{server=~\"${server:regex}\"}) * 1024 * 1024)",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "J"
         }
       ],
       "title": "Server Availability",
@@ -888,7 +920,8 @@
                 "Value #F",
                 "Value #G",
                 "Value #H",
-                "Value #I"
+                "Value #I",
+                "Value #J"
               ]
             }
           }
@@ -908,17 +941,18 @@
               "Time 8": true
             },
             "indexByName": {
+              "server": 0,
               "Value #A": 1,
+              "modelName": 2,
               "Value #B": 3,
               "Value #C": 4,
               "Value #D": 5,
               "Value #E": 6,
-              "Value #F": 7,
-              "Value #G": 8,
-              "Value #H": 9,
-              "Value #I": 10,
-              "modelName": 2,
-              "server": 0
+              "Value #J": 7,
+              "Value #F": 8,
+              "Value #G": 9,
+              "Value #H": 10,
+              "Value #I": 11
             },
             "renameByName": {
               "Value #A": "Status",
@@ -931,7 +965,8 @@
               "Value #H": "GPU Temperature",
               "Value #I": "CPU Temperature",
               "modelName": "GPU Model",
-              "server": "Server"
+              "server": "Server",
+              "Value #J": "Max VRAM"
             }
           }
         }
