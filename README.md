@@ -233,8 +233,9 @@ cd node && sudo docker compose --profile gpu down
 
 Prometheus retention defaults to 30 days. Image versions, retention, and the
 Grafana port can be changed in the generated `.env` files. DCGM Exporter is
-pinned to `4.6.0-4.8.3`; setup replaces older saved `latest` values with that
-pin while preserving explicit custom version tags.
+pinned to `4.6.0-4.8.3-distroless`; setup replaces older saved `latest` or
+previously generated unsuffixed values with that pin while preserving other
+explicit custom version tags.
 
 ## Remove old host installations
 

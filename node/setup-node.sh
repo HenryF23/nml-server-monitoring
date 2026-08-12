@@ -64,7 +64,7 @@ CENTRAL_HOST=""
 RESOLVED_CENTRAL_IP=""
 RESOLUTION_METHOD=""
 CPU_ONLY=0
-DEFAULT_DCGM_EXPORTER_TAG="4.6.0-4.8.3"
+DCGM_EXPORTER_PINNED_TAG="4.6.0-4.8.3-distroless"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -154,11 +154,12 @@ set_env CENTRAL_IP "$CENTRAL_IP"
 set_env DOCKER_ROOT_DIR "$DOCKER_ROOT_DIR"
 
 dcgm_exporter_tag="$(read_env DCGM_EXPORTER_TAG)"
-if [[ -z "$dcgm_exporter_tag" || "$dcgm_exporter_tag" == "latest" ]]; then
-    if [[ "$dcgm_exporter_tag" == "latest" ]]; then
-        info "Replacing the floating DCGM Exporter 'latest' tag with $DEFAULT_DCGM_EXPORTER_TAG."
+if [[ -z "$dcgm_exporter_tag" || "$dcgm_exporter_tag" == "latest" || \
+      "$dcgm_exporter_tag" == "${DCGM_EXPORTER_PINNED_TAG%-distroless}" ]]; then
+    if [[ -n "$dcgm_exporter_tag" ]]; then
+        info "Replacing DCGM Exporter tag '$dcgm_exporter_tag' with $DCGM_EXPORTER_PINNED_TAG."
     fi
-    set_env DCGM_EXPORTER_TAG "$DEFAULT_DCGM_EXPORTER_TAG"
+    set_env DCGM_EXPORTER_TAG "$DCGM_EXPORTER_PINNED_TAG"
 fi
 chmod 600 .env
 

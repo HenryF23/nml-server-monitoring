@@ -35,7 +35,7 @@ services:
       - --port=18080
 
   dcgm-exporter:
-    image: nvcr.io/nvidia/k8s/dcgm-exporter:${DCGM_EXPORTER_TAG:-4.6.0-4.8.3}
+    image: nvcr.io/nvidia/k8s/dcgm-exporter:${DCGM_EXPORTER_TAG:-4.6.0-4.8.3-distroless}
     restart: unless-stopped
     profiles:
       - gpu
