@@ -7,8 +7,13 @@ read_env() {
     grep -m1 -E "^${key}=" .env 2>/dev/null | cut -d= -f2- || true
 }
 
-prometheus_url="$(read_env GRAFANA_PROMETHEUS_URL)"
-prometheus_url="${prometheus_url:-http://127.0.0.1:9090}"
+bind_address="$(read_env CENTRAL_BIND_ADDRESS)"
+bind_address="${bind_address:-0.0.0.0}"
+if [[ "$bind_address" == "0.0.0.0" ]]; then
+    prometheus_url="http://127.0.0.1:9090"
+else
+    prometheus_url="http://${bind_address}:9090"
+fi
 api="${prometheus_url}/api/v1/query"
 query='up{job=~"prometheus-agent|node-exporter|cadvisor|dcgm-exporter"}'
 

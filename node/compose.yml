@@ -5,7 +5,7 @@ services:
     image: quay.io/prometheus/node-exporter:${NODE_EXPORTER_VERSION:-v1.12.1}
     restart: unless-stopped
     pid: host
-    network_mode: host
+    network_mode: service:prometheus-agent
     command:
       - --path.rootfs=/host
       - --web.listen-address=127.0.0.1:9100
@@ -15,7 +15,7 @@ services:
   cadvisor:
     image: ghcr.io/google/cadvisor:${CADVISOR_VERSION:-v0.60.5}
     restart: unless-stopped
-    network_mode: host
+    network_mode: service:prometheus-agent
     privileged: true
     devices:
       - /dev/kmsg:/dev/kmsg
@@ -39,7 +39,7 @@ services:
     restart: unless-stopped
     profiles:
       - gpu
-    network_mode: host
+    network_mode: service:prometheus-agent
     cap_add:
       - SYS_ADMIN
     runtime: nvidia
@@ -47,21 +47,21 @@ services:
       NVIDIA_VISIBLE_DEVICES: all
       DCGM_EXPORTER_LISTEN: 127.0.0.1:9400
 
-  # All collectors share the host network but listen only on loopback. The
-  # agent is the only component that talks to another server.
+  # All collectors share this container's bridge network namespace and can
+  # continue to communicate over loopback. Only the agent status endpoint is
+  # published to host loopback; remote write is the only outbound traffic.
   prometheus-agent:
     image: prom/prometheus:${PROMETHEUS_VERSION:-v3.13.2}
     restart: unless-stopped
     user: "65534:65534"
-    network_mode: host
-    depends_on:
-      - node-exporter
-      - cadvisor
+    network_mode: bridge
     command:
       - --agent
       - --config.file=/etc/prometheus/agent.yml
       - --storage.agent.path=/prometheus
-      - --web.listen-address=127.0.0.1:9095
+      - --web.listen-address=0.0.0.0:9095
+    ports:
+      - "127.0.0.1:9095:9095"
     environment:
       SERVER_NAME: ${SERVER_NAME:?Run setup-node.sh first}
     volumes:

@@ -118,7 +118,7 @@ done
 
 [[ $EUID -eq 0 ]] || die "Run this script with sudo/root."
 command -v docker >/dev/null 2>&1 || die "Docker is not installed."
-docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is required."
+docker compose version >/dev/null 2>&1 || die "The Docker Compose plugin is required."
 docker info >/dev/null 2>&1 || die "Cannot connect to the Docker daemon."
 
 if (( ! CPU_ONLY )); then
@@ -209,7 +209,7 @@ chown 65534:65534 "$tmp_config"
 chmod 444 "$tmp_config"
 mv "$tmp_config" prometheus/agent.yml
 
-info "Using Docker host networking; no Docker bridge network will be created."
+info "Using Docker's built-in bridge with one shared network namespace; no Compose network will be created."
 info "Using Docker data root $DOCKER_ROOT_DIR for cAdvisor."
 info "Pulling and validating the monitoring containers..."
 docker compose config >/dev/null
@@ -223,8 +223,11 @@ docker compose run --rm --no-deps --entrypoint /bin/promtool prometheus-agent \
 
 if (( ! CPU_ONLY )); then
     info "Checking NVIDIA GPU access from Docker..."
-    if ! docker compose --profile gpu run --rm --no-deps \
-        --entrypoint nvidia-smi dcgm-exporter -L >/dev/null; then
+    dcgm_exporter_tag="$(read_env DCGM_EXPORTER_TAG)"
+    if ! docker run --rm --network none --runtime nvidia \
+        --env NVIDIA_VISIBLE_DEVICES=all \
+        --entrypoint nvidia-smi \
+        "nvcr.io/nvidia/k8s/dcgm-exporter:${dcgm_exporter_tag}" -L >/dev/null; then
         die "Docker cannot access the NVIDIA GPU through the NVIDIA runtime. Check the NVIDIA driver and Container Toolkit configuration; use --cpu-only only when this server intentionally has no GPU."
     fi
     ok "NVIDIA GPU access from Docker is working."

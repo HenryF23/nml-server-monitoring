@@ -15,15 +15,18 @@ cAdvisor ──────┼─ Prometheus Agent ───► central-host:909
 DCGM Exporter ─┘       Tailscale preferred
 ```
 
-The stacks use Docker host networking, so Docker Compose creates no bridge
-networks and allocates no private subnets. Central services prefer the host's
-Tailscale interface. Node collectors bind only to host loopback.
+Both stacks use Docker's existing built-in `bridge`, so they do not create
+Compose networks or allocate additional private subnets. Grafana shares
+Prometheus's network namespace; on each monitored server, the collectors share
+the Prometheus Agent's network namespace. Components within each stack
+communicate over container loopback. Central services prefer the host's
+Tailscale interface.
 
 ## Requirements
 
 Every server needs:
 
-- Linux with Docker Engine and Docker Compose v2
+- Linux with Docker Engine and the `docker compose` plugin
 - IPv4 connectivity from each monitored server to central TCP `9090`
 - a resolvable central hostname or a reachable central IPv4 address
 
@@ -52,9 +55,9 @@ cd central
 ./setup-central.sh
 ```
 
-The script detects the central server's Tailscale IPv4 address and binds
-Prometheus and Grafana only to that interface. If Tailscale is unavailable, it
-warns and falls back to all IPv4 interfaces. It also generates the Grafana
+The script detects the central server's Tailscale IPv4 address and publishes
+Prometheus and Grafana only on that host interface. If Tailscale is unavailable,
+it warns and publishes on all IPv4 interfaces. It also generates the Grafana
 administrator password in `central/.env`.
 
 To select a LAN or other host interface explicitly:
@@ -68,17 +71,19 @@ Tailscale-preferred selection with `./setup-central.sh --auto-bind`. When you
 select a specific LAN interface, use that same address with
 `setup-node.sh --central-ip`; the central script prints the exact command.
 
-To make Prometheus and Grafana listen on every host IPv4 interface (for example,
+To publish Prometheus and Grafana on every host IPv4 interface (for example,
 both LAN and Tailscale), use:
 
 ```bash
 ./setup-central.sh --bind-address 0.0.0.0
 ```
 
-This saves `CENTRAL_BIND_ADDRESS=0.0.0.0`. It controls where the services
-**listen**; it does not choose the URL Grafana puts in generated links. Because
-TCP `9090` and `3000` are then reachable on every permitted interface, restrict
-them with your host/network firewall.
+This saves `CENTRAL_BIND_ADDRESS=0.0.0.0`. It controls the host IP used by
+Docker's published ports; Grafana and Prometheus listen on all interfaces only
+inside their shared container network namespace. It does not choose the URL
+Grafana puts in generated links. Because TCP `9090` and `3000` are then
+reachable on every permitted host interface, restrict them with
+Docker-compatible firewall rules or an upstream network firewall.
 
 For Grafana-generated share/external URLs, set the browser-facing root URL in
 `central/.env` to an address your viewers can actually reach:
@@ -87,15 +92,16 @@ For Grafana-generated share/external URLs, set the browser-facing root URL in
 GRAFANA_ROOT_URL=http://142.58.10.57:3000
 ```
 
-and pass it to Grafana in `central/compose.yml` under `grafana.environment`:
-
-```yaml
-GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-}
-```
-
 `GRAFANA_ROOT_URL` only controls Grafana's advertised/generated URL; it does not
-change listener binding or network reachability. Recreate Grafana after changing
+change port publication or network reachability. It is optional, but Grafana's
+default root URL is `http://localhost:3000`; set it when clients use another
+hostname, address, port, HTTPS proxy, or subpath. Recreate Grafana after changing
 it with `docker compose up -d --force-recreate grafana`.
+
+After upgrading from the earlier host-networked central stack, run
+`./setup-central.sh` once instead of starting Compose directly. The script
+rewrites Grafana's internal Prometheus URL for bridge networking and recreates
+both containers while preserving their named volumes.
 
 ## 2. Add a monitored server
 
@@ -141,6 +147,11 @@ updates need only:
 ```bash
 sudo ./setup-node.sh
 ```
+
+Run that command once on existing GPU nodes after upgrading from the earlier
+host-networked stack. For existing CPU-only nodes, rerun
+`sudo ./setup-node.sh --cpu-only`. Setup recreates the containers in their
+shared bridge namespace while preserving the Prometheus Agent volume.
 
 New servers normally appear in Grafana within 30 seconds.
 
@@ -193,9 +204,10 @@ cd central
 ./status.sh
 ```
 
-Open Grafana at `http://<central-host>:3000`, then select
-**NML → GPU Server Availability**. Both dashboards and their navigation links
-use the latest 24 hours.
+Open Grafana at `http://<central-host>:3000` (or the configured
+`GRAFANA_PORT`), then select
+**NML → GPU Server Availability**. All provisioned dashboards and their
+navigation links use the latest 24 hours.
 
 The first screen is designed for choosing a server:
 
@@ -226,39 +238,56 @@ temperature and power history, host CPU/RAM/disk history, and the busiest
 application containers. Its **Server** selector switches directly between
 machines.
 
+**GPU Server Availability · External** is the unfiltered overview intended for
+shared or externally embedded displays. It omits the server selector and
+drill-down links; use the main overview for interactive investigation.
+
 ## Network and security
 
-No Caddy proxy or application token is used. The default Tailscale binding
-limits both central listeners to the private tailnet. Grafana requires its
-generated administrator password; Prometheus remote write does not have
-application-level authentication. Use Tailscale access controls so monitored
-servers can reach TCP `9090` and only administrators can reach TCP `3000`.
+No Caddy proxy or application token is used. By default Docker publishes both
+central ports only on the detected Tailscale address, limiting them to the
+private tailnet. Grafana requires its generated administrator password;
+Prometheus remote write does not have application-level authentication. Use
+Tailscale access controls so monitored servers can reach TCP `9090` and only
+administrators can reach TCP `3000`.
 
 If Tailscale is unavailable or you explicitly bind to `0.0.0.0`, restrict both
-ports with the host firewall and use the setup only on a trusted private LAN.
+ports and use the setup only on a trusted private LAN. On Linux, Docker-published
+ports can bypass ordinary UFW rules. Apply restrictions through your upstream
+network firewall or the filtering mechanism appropriate for Docker's configured
+firewall backend; see Docker's
+[packet-filtering and firewall documentation](https://docs.docker.com/engine/network/packet-filtering-firewalls/).
 
 | Listener | Binding | Purpose |
 |---|---|---|
-| `9090/tcp` | central `CENTRAL_BIND_ADDRESS` | Prometheus API and remote write |
-| `3000/tcp` | central `CENTRAL_BIND_ADDRESS` | Grafana |
-| `9095/tcp` | node `127.0.0.1` | Prometheus Agent status |
-| `9100/tcp` | node `127.0.0.1` | Node Exporter |
-| `18080/tcp` | node `127.0.0.1` | cAdvisor |
-| `9400/tcp` | node `127.0.0.1` | DCGM Exporter |
+| `9090/tcp` | Docker-published on central `CENTRAL_BIND_ADDRESS` | Prometheus API and remote write |
+| `GRAFANA_PORT` (`3000/tcp` by default) | Docker-published on central `CENTRAL_BIND_ADDRESS` | Grafana |
+| `9095/tcp` | Docker-published on node `127.0.0.1` | Prometheus Agent status |
+| `9100/tcp` | node container loopback only | Node Exporter |
+| `18080/tcp` | node container loopback only | cAdvisor |
+| `9400/tcp` | node container loopback only | DCGM Exporter |
 
-Because this project creates no Docker networks, it does not consume an
-address from Docker's `default-address-pools` and cannot trigger the Compose
-subnet exhaustion seen with a single `/24` pool. Other Docker research projects
-can still create bridge networks and must follow your site's address-pool rule.
+The Agent status mapping uses host loopback. Docker Engine releases older than
+28.0 have a known limitation that can make loopback-published ports reachable
+from the same layer-2 network; see Docker's
+[port-publishing documentation](https://docs.docker.com/engine/network/port-publishing/).
 
-Host networking also means the listed host ports must be free. Existing Nginx
-is unaffected unless it already listens on one of those exact address/port
-combinations.
+The central stack uses one network namespace on Docker's existing built-in
+`bridge`. Each node stack also uses one shared namespace on that bridge.
+Compose does not create project networks or allocate additional subnets. This
+avoids allocating subnets from Docker's `default-address-pools` and cannot
+trigger Compose subnet exhaustion from this stack. Other Docker research
+projects can still create bridge networks and must follow your site's
+address-pool rule.
+
+The Docker-published central ports and node Agent status port must be free on
+their configured host addresses. Existing Nginx is unaffected unless it already
+listens on one of those exact address/port combinations.
 
 ## Common commands
 
 ```bash
-# Update central containers
+# Update central containers (also refreshes generated network settings)
 cd central && ./setup-central.sh
 
 # Update a GPU node

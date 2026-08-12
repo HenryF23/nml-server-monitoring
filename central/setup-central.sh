@@ -60,7 +60,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 command -v docker >/dev/null 2>&1 || die "Docker is not installed."
-docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is required."
+docker compose version >/dev/null 2>&1 || die "The Docker Compose plugin is required."
 docker info >/dev/null 2>&1 || die "Cannot connect to the Docker daemon."
 
 random_hex() {
@@ -120,11 +120,7 @@ fi
 is_ipv4 "$BIND_ADDRESS" || die "Invalid --bind-address '$BIND_ADDRESS'."
 set_env CENTRAL_BIND_MODE "$BIND_MODE"
 set_env CENTRAL_BIND_ADDRESS "$BIND_ADDRESS"
-if [[ "$BIND_ADDRESS" == "0.0.0.0" ]]; then
-    set_env GRAFANA_PROMETHEUS_URL "http://127.0.0.1:9090"
-else
-    set_env GRAFANA_PROMETHEUS_URL "http://${BIND_ADDRESS}:9090"
-fi
+set_env GRAFANA_PROMETHEUS_URL "http://127.0.0.1:9090"
 
 grafana_password="$(read_env GRAFANA_ADMIN_PASSWORD)"
 if [[ -z "$grafana_password" || "$grafana_password" == "CHANGE_ME" ]]; then
@@ -133,9 +129,9 @@ if [[ -z "$grafana_password" || "$grafana_password" == "CHANGE_ME" ]]; then
 fi
 chmod 600 .env
 
-info "Binding central services to $BIND_ADDRESS; no Docker bridge network will be created."
+info "Publishing central services on $BIND_ADDRESS from a shared built-in bridge network namespace."
 if [[ "$BIND_ADDRESS" == "0.0.0.0" ]]; then
-    warn "Prometheus and Grafana will listen on every host IPv4 interface."
+    warn "Prometheus and Grafana will be published on every host IPv4 interface."
     warn "Allow TCP 9090/3000 only from trusted LAN or Tailscale clients."
 fi
 docker compose config >/dev/null
