@@ -113,6 +113,14 @@ cd node
 A GPU server should report four `UP` targets. A CPU-only server should report
 three.
 
+Node Exporter reads the host root filesystem through a read-only bind mount.
+If you attach or mount a new filesystem after the node stack has started,
+refresh its filesystem metrics with:
+
+```bash
+sudo docker compose restart node-exporter
+```
+
 On the central server:
 
 ```bash
