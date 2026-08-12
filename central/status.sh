@@ -7,16 +7,9 @@ read_env() {
     grep -m1 -E "^${key}=" .env 2>/dev/null | cut -d= -f2- || true
 }
 
-tailscale_ip="$(read_env TAILSCALE_IP)"
-if [[ -z "$tailscale_ip" ]] && command -v tailscale >/dev/null 2>&1; then
-    tailscale_ip="$(tailscale ip -4 2>/dev/null | head -n1)"
-fi
-[[ -n "$tailscale_ip" ]] || {
-    echo "TAILSCALE_IP is missing. Run ./setup-central.sh first."
-    exit 1
-}
-
-api="http://${tailscale_ip}:9090/api/v1/query"
+prometheus_url="$(read_env GRAFANA_PROMETHEUS_URL)"
+prometheus_url="${prometheus_url:-http://127.0.0.1:9090}"
+api="${prometheus_url}/api/v1/query"
 query='up{job=~"prometheus-agent|node-exporter|cadvisor|dcgm-exporter"}'
 
 echo "=== Docker services ==="
@@ -30,7 +23,7 @@ command -v curl >/dev/null 2>&1 || {
 }
 
 if ! payload="$(curl -fsS --get --data-urlencode "query=$query" "$api")"; then
-    echo "Prometheus is not reachable at ${tailscale_ip}:9090."
+    echo "Prometheus is not reachable at ${prometheus_url}."
     exit 1
 fi
 

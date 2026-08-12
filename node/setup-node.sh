@@ -11,20 +11,20 @@ usage() {
     cat <<'EOF'
 Usage:
   sudo ./setup-node.sh --central-host HOSTNAME [--name NAME] [--cpu-only]
-  sudo ./setup-node.sh --central-ip TAILSCALE_IP [--name NAME] [--cpu-only]
+  sudo ./setup-node.sh --central-ip IPV4 [--name NAME] [--cpu-only]
 
-The central host or IP is saved after the first run. --central-host resolves a
-Tailscale MagicDNS name such as cs-nmg-lam01s. GPU monitoring is the default.
-Use --cpu-only only on a server without an NVIDIA GPU.
+The central host or IP is saved after the first run. HOSTNAME may use LAN DNS,
+/etc/hosts, or Tailscale MagicDNS. GPU monitoring is the default. Use
+--cpu-only only on a server without an NVIDIA GPU.
 EOF
 }
 
-is_tailscale_ipv4() {
+is_ipv4() {
     local ip="$1" a b c d extra
     IFS=. read -r a b c d extra <<<"$ip"
     [[ -z "${extra:-}" && "$a" =~ ^[0-9]+$ && "$b" =~ ^[0-9]+$ && \
        "$c" =~ ^[0-9]+$ && "$d" =~ ^[0-9]+$ ]] || return 1
-    (( a == 100 && b >= 64 && b <= 127 && c <= 255 && d <= 255 ))
+    (( 10#$a <= 255 && 10#$b <= 255 && 10#$c <= 255 && 10#$d <= 255 ))
 }
 
 resolve_central_host() {
@@ -35,17 +35,17 @@ resolve_central_host() {
         die "getent is required to resolve --central-host."
 
     while read -r candidate _; do
-        if is_tailscale_ipv4 "$candidate"; then
+        if is_ipv4 "$candidate"; then
             printf '%s\n' "$candidate"
             return 0
         fi
     done < <({ getent ahostsv4 "$host" || getent hosts "$host"; } 2>/dev/null || true)
 
-    die "Central host '$host' did not resolve to a Tailscale IPv4 address (100.64.0.0/10)."
+    die "Central host '$host' did not resolve to an IPv4 address. Check DNS or /etc/hosts."
 }
 
 SERVER_NAME=""
-CENTRAL_TAILSCALE_IP=""
+CENTRAL_IP=""
 CENTRAL_HOST=""
 CPU_ONLY=0
 
@@ -55,7 +55,7 @@ while [[ $# -gt 0 ]]; do
             [[ $# -ge 2 ]] || die "$1 requires a value"
             case "$1" in
                 --name) SERVER_NAME="$2" ;;
-                --central-ip) CENTRAL_TAILSCALE_IP="$2" ;;
+                --central-ip) CENTRAL_IP="$2" ;;
                 --central-host) CENTRAL_HOST="$2" ;;
             esac
             shift 2
@@ -66,18 +66,13 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-[[ -z "$CENTRAL_TAILSCALE_IP" || -z "$CENTRAL_HOST" ]] || \
+[[ -z "$CENTRAL_IP" || -z "$CENTRAL_HOST" ]] || \
     die "Use either --central-host or --central-ip, not both."
 
 [[ $EUID -eq 0 ]] || die "Run this script with sudo/root."
 command -v docker >/dev/null 2>&1 || die "Docker is not installed."
 docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is required."
 docker info >/dev/null 2>&1 || die "Cannot connect to the Docker daemon."
-command -v tailscale >/dev/null 2>&1 || die "Tailscale is not installed."
-
-TAILSCALE_IP="$(tailscale ip -4 2>/dev/null | head -n1)"
-is_tailscale_ipv4 "$TAILSCALE_IP" || \
-    die "This server is not connected to Tailscale. Run 'tailscale up' first."
 
 if (( ! CPU_ONLY )); then
     gpu_error="If this is intentionally a CPU-only server, rerun with --cpu-only."
@@ -111,48 +106,47 @@ set_env() {
 SERVER_NAME="${SERVER_NAME:-$(read_env SERVER_NAME)}"
 SERVER_NAME="${SERVER_NAME:-$(hostname -s)}"
 
-if [[ -z "$CENTRAL_HOST" && -z "$CENTRAL_TAILSCALE_IP" ]]; then
+if [[ -z "$CENTRAL_HOST" && -z "$CENTRAL_IP" ]]; then
     CENTRAL_HOST="$(read_env CENTRAL_HOST)"
     if [[ -z "$CENTRAL_HOST" ]]; then
-        CENTRAL_TAILSCALE_IP="$(read_env CENTRAL_TAILSCALE_IP)"
+        CENTRAL_IP="$(read_env CENTRAL_IP)"
     fi
 fi
 
 if [[ -n "$CENTRAL_HOST" ]]; then
-    CENTRAL_TAILSCALE_IP="$(resolve_central_host "$CENTRAL_HOST")"
-    info "Resolved central host '$CENTRAL_HOST' to $CENTRAL_TAILSCALE_IP."
+    CENTRAL_IP="$(resolve_central_host "$CENTRAL_HOST")"
+    info "Resolved central host '$CENTRAL_HOST' to $CENTRAL_IP."
 fi
 
 [[ "$SERVER_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || \
     die "Invalid server name '$SERVER_NAME'."
-is_tailscale_ipv4 "$CENTRAL_TAILSCALE_IP" || \
-    die "Provide --central-host HOSTNAME or --central-ip with a Tailscale IPv4 address."
+is_ipv4 "$CENTRAL_IP" || \
+    die "Provide --central-host HOSTNAME or --central-ip with a valid IPv4 address."
 
 [[ -f .env ]] || cp .env.example .env
 set_env SERVER_NAME "$SERVER_NAME"
-set_env TAILSCALE_IP "$TAILSCALE_IP"
 set_env CENTRAL_HOST "$CENTRAL_HOST"
-set_env CENTRAL_TAILSCALE_IP "$CENTRAL_TAILSCALE_IP"
+set_env CENTRAL_IP "$CENTRAL_IP"
 chmod 600 .env
 
 tmp_config="$(mktemp prometheus/agent.yml.tmp.XXXXXX)"
 if (( CPU_ONLY )); then
     sed -e '/^  # GPU_SCRAPE_JOB$/d' \
-        -e "s|__CENTRAL_TAILSCALE_IP__|${CENTRAL_TAILSCALE_IP}|" \
+        -e "s|__CENTRAL_IP__|${CENTRAL_IP}|" \
         -e 's|__GPU_ENABLED__|false|' \
         prometheus/agent.yml.template >"$tmp_config"
 else
     sed '/^  # GPU_SCRAPE_JOB$/r prometheus/gpu-scrape.yml' \
         prometheus/agent.yml.template |
         sed -e '/^  # GPU_SCRAPE_JOB$/d' \
-            -e "s|__CENTRAL_TAILSCALE_IP__|${CENTRAL_TAILSCALE_IP}|" \
+            -e "s|__CENTRAL_IP__|${CENTRAL_IP}|" \
             -e 's|__GPU_ENABLED__|true|' >"$tmp_config"
 fi
 chown 65534:65534 "$tmp_config"
 chmod 444 "$tmp_config"
 mv "$tmp_config" prometheus/agent.yml
 
-info "Using local Tailscale address $TAILSCALE_IP; no Docker bridge network will be created."
+info "Using Docker host networking; no Docker bridge network will be created."
 info "Pulling and validating the monitoring containers..."
 docker compose config >/dev/null
 if (( CPU_ONLY )); then
@@ -164,9 +158,9 @@ docker compose run --rm --no-deps --entrypoint /bin/promtool prometheus-agent \
     check config /etc/prometheus/agent.yml >/dev/null
 
 if command -v curl >/dev/null 2>&1 && \
-   ! curl -fsS --max-time 5 "http://${CENTRAL_TAILSCALE_IP}:9090/-/ready" >/dev/null; then
-    warn "Central Prometheus is not reachable at ${CENTRAL_TAILSCALE_IP}:9090."
-    warn "Check that setup-central.sh is running and that Tailscale access rules allow TCP 9090."
+   ! curl -fsS --max-time 5 "http://${CENTRAL_IP}:9090/-/ready" >/dev/null; then
+    warn "Central Prometheus is not reachable at ${CENTRAL_IP}:9090."
+    warn "Check setup-central.sh, routing, and firewall access to TCP 9090."
 fi
 
 if (( CPU_ONLY )); then
@@ -182,12 +176,11 @@ fi
 echo
 docker compose --profile gpu ps
 echo
-ok "'$SERVER_NAME' is configured to send metrics over Tailscale."
+ok "'$SERVER_NAME' is configured to send metrics to central Prometheus."
 if [[ -n "$CENTRAL_HOST" ]]; then
-    echo "Central : ${CENTRAL_HOST} (${CENTRAL_TAILSCALE_IP})"
+    echo "Central : ${CENTRAL_HOST} (${CENTRAL_IP})"
 else
-    echo "Central : ${CENTRAL_TAILSCALE_IP}"
+    echo "Central : ${CENTRAL_IP}"
 fi
-echo "Node IP : ${TAILSCALE_IP}"
 echo "Mode    : $( (( CPU_ONLY )) && echo CPU-only || echo GPU )"
 echo "Verify  : ./verify-node.sh"

@@ -5,7 +5,7 @@ datasources:
     uid: prometheus
     type: prometheus
     access: proxy
-    url: http://${TAILSCALE_IP}:9090
+    url: ${GRAFANA_PROMETHEUS_URL}
     isDefault: true
     editable: false
     jsonData:

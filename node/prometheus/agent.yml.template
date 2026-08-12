@@ -3,7 +3,6 @@ global:
   scrape_timeout: 10s
   external_labels:
     server: "${SERVER_NAME}"
-    tailscale_ip: "${TAILSCALE_IP}"
     gpu: "__GPU_ENABLED__"
 
 scrape_configs:
@@ -26,4 +25,4 @@ scrape_configs:
 
 remote_write:
   - name: central
-    url: "http://__CENTRAL_TAILSCALE_IP__:9090/api/v1/write"
+    url: "http://__CENTRAL_IP__:9090/api/v1/write"

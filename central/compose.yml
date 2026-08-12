@@ -8,7 +8,7 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
       - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}
-      - --web.listen-address=${TAILSCALE_IP:?Run setup-central.sh first}:9090
+      - --web.listen-address=${CENTRAL_BIND_ADDRESS:-0.0.0.0}:9090
       - --web.enable-remote-write-receiver
     network_mode: host
     volumes:
@@ -26,9 +26,9 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
-      GF_SERVER_HTTP_ADDR: ${TAILSCALE_IP:?Run setup-central.sh first}
+      GF_SERVER_HTTP_ADDR: ${CENTRAL_BIND_ADDRESS:-0.0.0.0}
       GF_SERVER_HTTP_PORT: ${GRAFANA_PORT:-3000}
-      TAILSCALE_IP: ${TAILSCALE_IP:?Run setup-central.sh first}
+      GRAFANA_PROMETHEUS_URL: ${GRAFANA_PROMETHEUS_URL:-http://127.0.0.1:9090}
     network_mode: host
     volumes:
       - grafana_data:/var/lib/grafana
