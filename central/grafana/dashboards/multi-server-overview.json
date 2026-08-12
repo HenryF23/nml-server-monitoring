@@ -23,7 +23,7 @@
       },
       "id": 1,
       "options": {
-        "content": "**AVAILABLE** = all GPUs free + CPU <25%  ·  **HAS CAPACITY** = some GPUs free + CPU <25%  ·  **CPU BUSY** = GPUs free + CPU ≥25%  ·  **IN USE** = no free GPUs\n\n**CPU ONLY** = GPU monitoring disabled  ·  **METRICS MISSING** = server online but GPU status unavailable  ·  **OFFLINE** = node telemetry unavailable",
+        "content": "**AVAILABLE** = all GPUs free + CPU <25%  \u00b7  **HAS CAPACITY** = some GPUs free + CPU <25%  \u00b7  **CPU BUSY** = GPUs free + CPU \u226525%  \u00b7  **IN USE** = no free GPUs\n\n**CPU ONLY** = GPU monitoring disabled  \u00b7  **METRICS MISSING** = server online but GPU status unavailable  \u00b7  **OFFLINE** = node telemetry unavailable",
         "mode": "markdown"
       },
       "title": "",
@@ -210,7 +210,7 @@
           "refId": "A"
         }
       ],
-      "title": "Servers · No Free GPUs",
+      "title": "Servers \u00b7 No Free GPUs",
       "type": "stat"
     },
     {
@@ -550,7 +550,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 90
+                "value": 120
               },
               {
                 "id": "thresholds",
@@ -678,7 +678,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 90
+                "value": 125
               },
               {
                 "id": "unit",
@@ -724,7 +724,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 90
+                "value": 125
               },
               {
                 "id": "unit",
@@ -1035,7 +1035,7 @@
           "refId": "A"
         }
       ],
-      "title": "GPU Compute · Busiest GPU",
+      "title": "GPU Compute \u00b7 Busiest GPU",
       "type": "timeseries"
     },
     {
@@ -1135,7 +1135,7 @@
           "refId": "A"
         }
       ],
-      "title": "VRAM Usage · Most Allocated GPU",
+      "title": "VRAM Usage \u00b7 Most Allocated GPU",
       "type": "timeseries"
     },
     {
