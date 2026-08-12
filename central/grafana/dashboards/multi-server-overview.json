@@ -515,7 +515,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "/^(GPU Util|VRAM|CPU|Memory)$/"
+              "options": "/^(GPU Utilization|VRAM|CPU|Memory)$/"
             },
             "properties": [
               {
@@ -545,7 +545,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "GPU Util"
+              "options": "GPU Utilization"
             },
             "properties": [
               {
@@ -673,7 +673,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "GPU Temp"
+              "options": "GPU Temperature"
             },
             "properties": [
               {
@@ -719,7 +719,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "CPU Temp"
+              "options": "CPU Temperature"
             },
             "properties": [
               {
@@ -924,12 +924,12 @@
               "Value #A": "Status",
               "Value #B": "GPUs",
               "Value #C": "Free",
-              "Value #D": "GPU Util",
+              "Value #D": "GPU Utilization",
               "Value #E": "VRAM",
               "Value #F": "CPU",
               "Value #G": "Memory",
-              "Value #H": "GPU Temp",
-              "Value #I": "CPU Temp",
+              "Value #H": "GPU Temperature",
+              "Value #I": "CPU Temperature",
               "modelName": "GPU Model",
               "server": "Server"
             }
