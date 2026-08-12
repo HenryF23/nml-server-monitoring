@@ -13,9 +13,9 @@ Usage:
   sudo ./setup-node.sh --central-host HOSTNAME [--name NAME] [--cpu-only]
   sudo ./setup-node.sh --central-ip IPV4 [--name NAME] [--cpu-only]
 
-The central host or IP is saved after the first run. HOSTNAME may use LAN DNS,
-/etc/hosts, or Tailscale MagicDNS. GPU monitoring is the default. Use
---cpu-only only on a server without an NVIDIA GPU.
+The central host or IP is saved after the first run. --central-host prefers
+Tailscale and falls back to system DNS. Use --central-ip to select an address
+explicitly. GPU monitoring is the default; use --cpu-only only without a GPU.
 EOF
 }
 
@@ -31,22 +31,38 @@ resolve_central_host() {
     local host="$1" candidate
     [[ "$host" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]] || \
         die "Invalid central hostname '$host'."
+
+    RESOLVED_CENTRAL_IP=""
+    RESOLUTION_METHOD=""
+
+    if command -v tailscale >/dev/null 2>&1; then
+        candidate="$(tailscale ip -4 "$host" 2>/dev/null | head -n1 || true)"
+        if is_ipv4 "$candidate"; then
+            RESOLVED_CENTRAL_IP="$candidate"
+            RESOLUTION_METHOD="Tailscale"
+            return 0
+        fi
+    fi
+
     command -v getent >/dev/null 2>&1 || \
-        die "getent is required to resolve --central-host."
+        die "Central host '$host' is unknown to Tailscale and getent is unavailable."
 
     while read -r candidate _; do
         if is_ipv4 "$candidate"; then
-            printf '%s\n' "$candidate"
+            RESOLVED_CENTRAL_IP="$candidate"
+            RESOLUTION_METHOD="system DNS"
             return 0
         fi
     done < <({ getent ahostsv4 "$host" || getent hosts "$host"; } 2>/dev/null || true)
 
-    die "Central host '$host' did not resolve to an IPv4 address. Check DNS or /etc/hosts."
+    die "Central host '$host' is unknown to Tailscale and did not resolve through system DNS."
 }
 
 SERVER_NAME=""
 CENTRAL_IP=""
 CENTRAL_HOST=""
+RESOLVED_CENTRAL_IP=""
+RESOLUTION_METHOD=""
 CPU_ONLY=0
 
 while [[ $# -gt 0 ]]; do
@@ -73,6 +89,12 @@ done
 command -v docker >/dev/null 2>&1 || die "Docker is not installed."
 docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is required."
 docker info >/dev/null 2>&1 || die "Cannot connect to the Docker daemon."
+
+DOCKER_ROOT_DIR="$(docker info --format '{{.DockerRootDir}}')"
+[[ "$DOCKER_ROOT_DIR" == /* && "$DOCKER_ROOT_DIR" != "/" ]] || \
+    die "Docker returned an invalid data root: '$DOCKER_ROOT_DIR'."
+[[ -d "$DOCKER_ROOT_DIR" ]] || \
+    die "Docker data root does not exist: '$DOCKER_ROOT_DIR'."
 
 if (( ! CPU_ONLY )); then
     gpu_error="If this is intentionally a CPU-only server, rerun with --cpu-only."
@@ -114,8 +136,9 @@ if [[ -z "$CENTRAL_HOST" && -z "$CENTRAL_IP" ]]; then
 fi
 
 if [[ -n "$CENTRAL_HOST" ]]; then
-    CENTRAL_IP="$(resolve_central_host "$CENTRAL_HOST")"
-    info "Resolved central host '$CENTRAL_HOST' to $CENTRAL_IP."
+    resolve_central_host "$CENTRAL_HOST"
+    CENTRAL_IP="$RESOLVED_CENTRAL_IP"
+    info "Resolved central host '$CENTRAL_HOST' to $CENTRAL_IP via $RESOLUTION_METHOD."
 fi
 
 [[ "$SERVER_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || \
@@ -127,6 +150,7 @@ is_ipv4 "$CENTRAL_IP" || \
 set_env SERVER_NAME "$SERVER_NAME"
 set_env CENTRAL_HOST "$CENTRAL_HOST"
 set_env CENTRAL_IP "$CENTRAL_IP"
+set_env DOCKER_ROOT_DIR "$DOCKER_ROOT_DIR"
 chmod 600 .env
 
 tmp_config="$(mktemp prometheus/agent.yml.tmp.XXXXXX)"
@@ -147,6 +171,7 @@ chmod 444 "$tmp_config"
 mv "$tmp_config" prometheus/agent.yml
 
 info "Using Docker host networking; no Docker bridge network will be created."
+info "Using Docker data root $DOCKER_ROOT_DIR for cAdvisor."
 info "Pulling and validating the monitoring containers..."
 docker compose config >/dev/null
 if (( CPU_ONLY )); then
@@ -157,10 +182,13 @@ fi
 docker compose run --rm --no-deps --entrypoint /bin/promtool prometheus-agent \
     check config /etc/prometheus/agent.yml >/dev/null
 
-if command -v curl >/dev/null 2>&1 && \
-   ! curl -fsS --max-time 5 "http://${CENTRAL_IP}:9090/-/ready" >/dev/null; then
-    warn "Central Prometheus is not reachable at ${CENTRAL_IP}:9090."
-    warn "Check setup-central.sh, routing, and firewall access to TCP 9090."
+if command -v curl >/dev/null 2>&1; then
+    if curl -fsS --max-time 5 "http://${CENTRAL_IP}:9090/-/ready" >/dev/null; then
+        ok "Central Prometheus is reachable at ${CENTRAL_IP}:9090."
+    else
+        warn "Central Prometheus is not reachable at ${CENTRAL_IP}:9090."
+        warn "Check setup-central.sh, routing, and firewall access to TCP 9090."
+    fi
 fi
 
 if (( CPU_ONLY )); then

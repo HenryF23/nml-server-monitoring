@@ -23,7 +23,12 @@ services:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
       - /sys:/sys:ro
-      - /var/lib/docker:/var/lib/docker:ro
+      - type: bind
+        source: ${DOCKER_ROOT_DIR:?Run setup-node.sh first}
+        target: /var/lib/docker
+        read_only: true
+        bind:
+          create_host_path: false
       - /dev/disk:/dev/disk:ro
     command:
       - --listen_ip=127.0.0.1

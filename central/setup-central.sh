@@ -10,11 +10,11 @@ die()  { printf '\033[1;31m[FAIL]\033[0m %s\n' "$*" >&2; exit 1; }
 usage() {
     cat <<'EOF'
 Usage:
-  ./setup-central.sh [--bind-address IPV4]
+  ./setup-central.sh [--bind-address IPV4 | --auto-bind]
 
-By default, Prometheus and Grafana listen on all host IPv4 interfaces so nodes
-can connect through LAN DNS, /etc/hosts, or Tailscale. Use --bind-address to
-restrict both services to one host address.
+Automatic binding prefers this server's Tailscale IPv4 address and falls back
+to all IPv4 interfaces when Tailscale is unavailable. --bind-address selects
+and saves one address explicitly; --auto-bind returns to automatic selection.
 EOF
 }
 
@@ -26,13 +26,33 @@ is_ipv4() {
     (( 10#$a <= 255 && 10#$b <= 255 && 10#$c <= 255 && 10#$d <= 255 ))
 }
 
+is_tailscale_ipv4() {
+    local ip="$1" a b c d extra
+    is_ipv4 "$ip" || return 1
+    IFS=. read -r a b c d extra <<<"$ip"
+    (( 10#$a == 100 && 10#$b >= 64 && 10#$b <= 127 ))
+}
+
 BIND_ADDRESS=""
+BIND_MODE=""
+BIND_OPTION_SET=0
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --bind-address)
             [[ $# -ge 2 ]] || die "$1 requires a value"
+            (( BIND_OPTION_SET == 0 )) || \
+                die "Use either --bind-address or --auto-bind, not both."
             BIND_ADDRESS="$2"
+            BIND_MODE="manual"
+            BIND_OPTION_SET=1
             shift 2
+            ;;
+        --auto-bind)
+            (( BIND_OPTION_SET == 0 )) || \
+                die "Use either --bind-address or --auto-bind, not both."
+            BIND_MODE="auto"
+            BIND_OPTION_SET=1
+            shift
             ;;
         -h|--help) usage; exit 0 ;;
         *) die "Unknown option: $1" ;;
@@ -75,9 +95,30 @@ else
     info "Preserving existing central/.env settings."
 fi
 
-BIND_ADDRESS="${BIND_ADDRESS:-$(read_env CENTRAL_BIND_ADDRESS)}"
-BIND_ADDRESS="${BIND_ADDRESS:-0.0.0.0}"
+BIND_MODE="${BIND_MODE:-$(read_env CENTRAL_BIND_MODE)}"
+BIND_MODE="${BIND_MODE:-auto}"
+[[ "$BIND_MODE" == "auto" || "$BIND_MODE" == "manual" ]] || \
+    die "Invalid CENTRAL_BIND_MODE '$BIND_MODE'. Use auto or manual."
+
+if [[ "$BIND_MODE" == "manual" ]]; then
+    BIND_ADDRESS="${BIND_ADDRESS:-$(read_env CENTRAL_BIND_ADDRESS)}"
+    [[ -n "$BIND_ADDRESS" ]] || \
+        die "Manual binding requires --bind-address IPV4."
+else
+    BIND_ADDRESS=""
+    if command -v tailscale >/dev/null 2>&1; then
+        BIND_ADDRESS="$(tailscale ip -4 2>/dev/null | head -n1 || true)"
+    fi
+    if is_tailscale_ipv4 "$BIND_ADDRESS"; then
+        info "Detected local Tailscale address $BIND_ADDRESS."
+    else
+        BIND_ADDRESS="0.0.0.0"
+        warn "Tailscale is unavailable; falling back to all host IPv4 interfaces."
+    fi
+fi
+
 is_ipv4 "$BIND_ADDRESS" || die "Invalid --bind-address '$BIND_ADDRESS'."
+set_env CENTRAL_BIND_MODE "$BIND_MODE"
 set_env CENTRAL_BIND_ADDRESS "$BIND_ADDRESS"
 if [[ "$BIND_ADDRESS" == "0.0.0.0" ]]; then
     set_env GRAFANA_PROMETHEUS_URL "http://127.0.0.1:9090"
@@ -135,7 +176,11 @@ echo "Show the generated Grafana password later with:"
 echo "  grep '^GRAFANA_ADMIN_PASSWORD=' .env"
 echo
 echo "Run this once from node/ on each monitored server:"
-echo "  sudo ./setup-node.sh --central-host '${central_host}'"
+if [[ "$BIND_MODE" == "manual" && "$BIND_ADDRESS" != "0.0.0.0" ]]; then
+    echo "  sudo ./setup-node.sh --central-ip '${BIND_ADDRESS}'"
+else
+    echo "  sudo ./setup-node.sh --central-host '${central_host}'"
+fi
 echo
 echo "IP fallback (use any address that reaches this server):"
 echo "  sudo ./setup-node.sh --central-ip '<central-ip>'"

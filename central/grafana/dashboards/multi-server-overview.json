@@ -2,7 +2,7 @@
   "annotations": {
     "list": []
   },
-  "description": "At-a-glance GPU server availability for NML. Available means online, CPU below 25%, and every GPU below 10% compute and 10% framebuffer use over five minutes.",
+  "description": "At-a-glance GPU capacity for NML, distinguishing fully available, partially available, CPU-constrained, fully occupied, and offline servers.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -23,7 +23,7 @@
       },
       "id": 1,
       "options": {
-        "content": "**AVAILABLE** = online + CPU below 25% + every GPU below 10% compute and 10% VRAM for 5 minutes.  **OFFLINE** = seen within 24 hours, but no current metrics.",
+        "content": "**AVAILABLE** = all GPUs free + CPU below 25%.  **HAS CAPACITY** = some GPUs free + CPU below 25%.  **CPU BUSY** = GPUs free but CPU at or above 25%.  **IN USE** = no free GPUs.",
         "mode": "markdown"
       },
       "title": "",
@@ -92,7 +92,7 @@
           "refId": "A"
         }
       ],
-      "title": "Available Servers",
+      "title": "Fully Available",
       "type": "stat"
     },
     {
@@ -165,7 +165,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Online GPU servers that do not currently meet the availability rule.",
+      "description": "Online GPU servers where no GPU is below both the 10% compute and 10% VRAM thresholds.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -203,14 +203,14 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "clamp_min((sum(nml:server_gpu_count{server=~\"${server:regex}\"} > bool 0) or vector(0)) - (sum(nml:server_available{server=~\"${server:regex}\"}) or vector(0)), 0)",
+          "expr": "sum(nml:server_status{server=~\"${server:regex}\"} == bool 2) or vector(0)",
           "instant": true,
-          "legendFormat": "Busy",
+          "legendFormat": "In Use",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "Busy Servers",
+      "title": "Fully In Use",
       "type": "stat"
     },
     {
@@ -313,7 +313,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 116
+                "value": 132
               },
               {
                 "id": "custom.align",
@@ -336,13 +336,28 @@
                         "text": "OFFLINE"
                       },
                       "1": {
-                        "color": "dark-orange",
+                        "color": "purple",
                         "index": 1,
-                        "text": "BUSY"
+                        "text": "CPU ONLY"
                       },
                       "2": {
-                        "color": "dark-green",
+                        "color": "dark-orange",
                         "index": 2,
+                        "text": "IN USE"
+                      },
+                      "3": {
+                        "color": "dark-yellow",
+                        "index": 3,
+                        "text": "CPU BUSY"
+                      },
+                      "4": {
+                        "color": "dark-blue",
+                        "index": 4,
+                        "text": "HAS CAPACITY"
+                      },
+                      "5": {
+                        "color": "dark-green",
+                        "index": 5,
                         "text": "AVAILABLE"
                       }
                     },
@@ -360,12 +375,24 @@
                       "value": null
                     },
                     {
-                      "color": "dark-orange",
+                      "color": "purple",
                       "value": 1
                     },
                     {
-                      "color": "dark-green",
+                      "color": "dark-orange",
                       "value": 2
+                    },
+                    {
+                      "color": "dark-yellow",
+                      "value": 3
+                    },
+                    {
+                      "color": "dark-blue",
+                      "value": 4
+                    },
+                    {
+                      "color": "dark-green",
+                      "value": 5
                     }
                   ]
                 }
@@ -393,7 +420,7 @@
                 "value": [
                   {
                     "targetBlank": false,
-                    "title": "Open server details",
+                    "title": "${__value.text}",
                     "url": "/d/nml-server-detail/server-details?var-server=${__value.raw}&from=${__from}&to=${__to}"
                   }
                 ]
@@ -697,7 +724,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "(max by (server) (up{job=\"node-exporter\",server=~\"${server:regex}\"}) + on (server) (nml:server_available{server=~\"${server:regex}\"} or on (server) (0 * max by (server) (up{job=\"node-exporter\",server=~\"${server:regex}\"})))) or on (server) (0 * max by (server) (max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h])))",
+          "expr": "nml:server_status{server=~\"${server:regex}\"} or on (server) (1 * max by (server) (up{job=\"node-exporter\",gpu=\"false\",server=~\"${server:regex}\"})) or on (server) (2 * max by (server) (up{job=\"node-exporter\",gpu=\"true\",server=~\"${server:regex}\"})) or on (server) (0 * max by (server) (max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h])))",
           "format": "table",
           "instant": true,
           "range": false,
@@ -1249,5 +1276,5 @@
   "timezone": "browser",
   "title": "GPU Server Availability",
   "uid": "multi-server-overview",
-  "version": 3
+  "version": 4
 }

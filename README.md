@@ -1,9 +1,8 @@
 # Multi-server GPU monitoring
 
-Dockerized monitoring for servers that can reach one central host over IPv4.
-LAN DNS, `/etc/hosts`, direct IP addresses, and Tailscale MagicDNS are all
-supported. Adding a server does not require editing or restarting central
-Prometheus.
+Dockerized monitoring for GPU servers, with Tailscale as the preferred private
+transport and LAN IPv4 as an explicit fallback. Adding a server does not
+require editing or restarting central Prometheus.
 
 Each monitored server runs Node Exporter, cAdvisor, NVIDIA DCGM Exporter, and a
 Prometheus Agent. The agent sends metrics to central Prometheus; Grafana
@@ -13,12 +12,12 @@ displays them automatically.
 monitored server                         central server
 Node Exporter ─┐                        Prometheus ── Grafana
 cAdvisor ──────┼─ Prometheus Agent ───► central-host:9090
-DCGM Exporter ─┘       LAN or Tailscale
+DCGM Exporter ─┘       Tailscale preferred
 ```
 
 The stacks use Docker host networking, so Docker Compose creates no bridge
-networks and allocates no private subnets. Central services listen on all host
-IPv4 interfaces by default. Node collectors bind only to host loopback.
+networks and allocates no private subnets. Central services prefer the host's
+Tailscale interface. Node collectors bind only to host loopback.
 
 ## Requirements
 
@@ -28,8 +27,9 @@ Every server needs:
 - IPv4 connectivity from each monitored server to central TCP `9090`
 - a resolvable central hostname or a reachable central IPv4 address
 
-Tailscale is recommended when the machines are not already on one trusted
-private network, but it is not required by the scripts.
+Install Tailscale on the central and monitored servers for the default setup.
+Without Tailscale, central falls back to all host IPv4 interfaces and nodes use
+system DNS or an explicit LAN address.
 
 GPU monitoring is the default. GPU servers also need a working NVIDIA driver
 and NVIDIA Container Toolkit configured for Docker.
@@ -41,36 +41,40 @@ cd central
 ./setup-central.sh
 ```
 
-The script starts Prometheus and Grafana on all host IPv4 interfaces and prints
-the node setup command. It generates the Grafana administrator password in
-`central/.env`.
+The script detects the central server's Tailscale IPv4 address and binds
+Prometheus and Grafana only to that interface. If Tailscale is unavailable, it
+warns and falls back to all IPv4 interfaces. It also generates the Grafana
+administrator password in `central/.env`.
 
-To expose both services only on one host interface instead:
+To select a LAN or other host interface explicitly:
 
 ```bash
-./setup-central.sh --bind-address 100.x.y.z
+./setup-central.sh --bind-address 142.58.10.57
 ```
 
-This is a host interface address, not a Docker subnet. The selected value is
-saved for later runs.
+The explicit address is saved for later runs. Return to automatic
+Tailscale-preferred selection with `./setup-central.sh --auto-bind`. When you
+select a specific LAN interface, use that same address with
+`setup-node.sh --central-ip`; the central script prints the exact command.
 
 ## 2. Add a monitored server
 
-Copy `node/` to the server and use any hostname that resolves from that node:
+Copy `node/` to the server and use the central server's machine name:
 
 ```bash
 cd node
 sudo ./setup-node.sh --central-host cs-nmg-lam01s
 ```
 
-The script resolves the hostname to an IPv4 address and saves both values. On
-later runs it resolves the saved hostname again, so DNS changes are picked up.
-The address may come from LAN DNS, `/etc/hosts`, or Tailscale MagicDNS.
+When Tailscale is available, the script first asks Tailscale for that machine's
+IPv4 address. It falls back to system DNS only when Tailscale does not know the
+name. The hostname is saved and resolved again on later runs.
 
-Direct IPv4 addresses are also supported:
+Use `--central-ip` when you intentionally want a specific address, including
+LAN transport:
 
 ```bash
-sudo ./setup-node.sh --central-ip 192.0.2.10
+sudo ./setup-node.sh --central-ip 142.58.10.57
 ```
 
 The monitored server name is resolved automatically with `hostname -s`. Use
@@ -102,6 +106,10 @@ New servers normally appear in Grafana within 30 seconds.
 
 The central and node stacks can run on the same host; their ports do not
 overlap.
+
+Node setup also reads Docker's actual data directory from `docker info` and
+mounts that directory read-only into cAdvisor. Custom Docker roots therefore
+need no manual Compose edits, and missing paths are never created silently.
 
 ### CPU-only exception
 
@@ -146,12 +154,17 @@ Open Grafana at `http://<central-host>:3000`, then select
 
 The first screen is designed for choosing a server:
 
-- **Available** means the server is online, host CPU usage is below 25%, and
-  every GPU has averaged below 10% compute and 10% VRAM usage for five minutes.
-- **Free GPUs** counts individual GPUs below both GPU thresholds.
-- **Busy** means the server is online but does not meet the availability rule.
-- **Offline** includes servers seen during the last 24 hours whose metrics are
-  no longer arriving.
+- **Available** means every GPU is free and host CPU usage is below 25%.
+- **Has Capacity** means some GPUs are free and host CPU usage is below 25%.
+- **CPU Busy** means GPUs are free but host CPU usage is at least 25%.
+- **In Use** means no GPU currently meets the free threshold.
+- **CPU Only** identifies a node intentionally installed with `--cpu-only`.
+- **Offline** means a server was seen within 24 hours but has no current data.
+
+A GPU is considered free when its five-minute average compute and VRAM usage
+are both below 10%. The **Free GPUs** column shows the exact usable count, so a
+four-GPU server with two occupied GPUs and low host CPU is shown as
+**Has Capacity · 2 free**.
 
 The server table shows GPU model and count, free GPUs, GPU and VRAM use, CPU,
 RAM, temperature, and root-disk use. The **Servers** selector filters every
@@ -165,21 +178,14 @@ machines.
 
 ## Network and security
 
-No Caddy proxy or application token is used. By default, central Prometheus and
-Grafana listen on `0.0.0.0` so any address assigned to the server can be used.
-Grafana requires its generated administrator password; Prometheus remote write
-does not have application-level authentication.
-
-Use this only on a trusted private LAN, or use Tailscale and restrict the
-central bind address:
-
-```bash
-cd central
-./setup-central.sh --bind-address "$(tailscale ip -4)"
-```
-
-In either case, use the host firewall or Tailscale access controls so monitored
+No Caddy proxy or application token is used. The default Tailscale binding
+limits both central listeners to the private tailnet. Grafana requires its
+generated administrator password; Prometheus remote write does not have
+application-level authentication. Use Tailscale access controls so monitored
 servers can reach TCP `9090` and only administrators can reach TCP `3000`.
+
+If Tailscale is unavailable or you explicitly bind to `0.0.0.0`, restrict both
+ports with the host firewall and use the setup only on a trusted private LAN.
 
 | Listener | Binding | Purpose |
 |---|---|---|

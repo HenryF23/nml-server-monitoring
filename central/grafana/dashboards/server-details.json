@@ -25,14 +25,14 @@
   "panels": [
     {
       "gridPos": {
-        "h": 2,
+        "h": 3,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "id": 1,
       "options": {
-        "content": "## ${server:text}\nLive detail for the selected server. Use the **Server** selector to switch machines, or [return to all servers](/d/multi-server-overview/gpu-server-availability?from=${__from}&to=${__to}).",
+        "content": "## ${server:text}\n[← Return to all servers](/d/multi-server-overview/gpu-server-availability?from=${__from}&to=${__to}) · Use the **Server** selector above to switch machines.",
         "mode": "markdown"
       },
       "title": "",
@@ -44,7 +44,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Available requires the node to be online, CPU below 25%, and every GPU below 10% compute and VRAM use for five minutes.",
+      "description": "Available: all GPUs free and CPU below 25%. Has Capacity: some GPUs free and CPU below 25%. CPU Busy: GPUs are free but CPU is at least 25%. In Use: no free GPUs.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -59,13 +59,28 @@
                   "text": "OFFLINE"
                 },
                 "1": {
-                  "color": "dark-orange",
+                  "color": "purple",
                   "index": 1,
-                  "text": "BUSY"
+                  "text": "CPU ONLY"
                 },
                 "2": {
-                  "color": "dark-green",
+                  "color": "dark-orange",
                   "index": 2,
+                  "text": "IN USE"
+                },
+                "3": {
+                  "color": "dark-yellow",
+                  "index": 3,
+                  "text": "CPU BUSY"
+                },
+                "4": {
+                  "color": "dark-blue",
+                  "index": 4,
+                  "text": "HAS CAPACITY"
+                },
+                "5": {
+                  "color": "dark-green",
+                  "index": 5,
                   "text": "AVAILABLE"
                 }
               },
@@ -80,12 +95,24 @@
                 "value": null
               },
               {
-                "color": "dark-orange",
+                "color": "purple",
                 "value": 1
               },
               {
-                "color": "dark-green",
+                "color": "dark-orange",
                 "value": 2
+              },
+              {
+                "color": "dark-yellow",
+                "value": 3
+              },
+              {
+                "color": "dark-blue",
+                "value": 4
+              },
+              {
+                "color": "dark-green",
+                "value": 5
               }
             ]
           }
@@ -96,7 +123,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 2
+        "y": 3
       },
       "id": 2,
       "options": {
@@ -118,7 +145,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "(max(up{job=\"node-exporter\",server=~\"${server:regex}\"}) + (max(nml:server_available{server=~\"${server:regex}\"}) or (0 * max(up{job=\"node-exporter\",server=~\"${server:regex}\"})))) or (0 * max(max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h])))",
+          "expr": "max(nml:server_status{server=~\"${server:regex}\"}) or (1 * max(up{job=\"node-exporter\",gpu=\"false\",server=~\"${server:regex}\"})) or (2 * max(up{job=\"node-exporter\",gpu=\"true\",server=~\"${server:regex}\"})) or (0 * max(max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h])))",
           "instant": true,
           "legendFormat": "Status",
           "range": false,
@@ -148,7 +175,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 2
+        "y": 3
       },
       "id": 3,
       "options": {
@@ -212,7 +239,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 2
+        "y": 3
       },
       "id": 4,
       "options": {
@@ -282,7 +309,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 2
+        "y": 3
       },
       "id": 5,
       "options": {
@@ -351,7 +378,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 2
+        "y": 3
       },
       "id": 6,
       "options": {
@@ -420,7 +447,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 2
+        "y": 3
       },
       "id": 7,
       "options": {
@@ -663,7 +690,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 7
       },
       "id": 8,
       "options": {
@@ -820,7 +847,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 15
+        "y": 16
       },
       "id": 9,
       "options": {
@@ -891,7 +918,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 15
+        "y": 16
       },
       "id": 10,
       "options": {
@@ -961,7 +988,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 23
+        "y": 24
       },
       "id": 11,
       "options": {
@@ -1030,7 +1057,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 23
+        "y": 24
       },
       "id": 12,
       "options": {
@@ -1101,7 +1128,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 31
+        "y": 32
       },
       "id": 13,
       "options": {
@@ -1172,7 +1199,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 31
+        "y": 32
       },
       "id": 14,
       "options": {
@@ -1240,7 +1267,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 31
+        "y": 32
       },
       "id": 15,
       "options": {
@@ -1342,7 +1369,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 39
+        "y": 40
       },
       "id": 16,
       "options": {
@@ -1468,5 +1495,5 @@
   "timezone": "browser",
   "title": "Server Details",
   "uid": "nml-server-detail",
-  "version": 1
+  "version": 2
 }

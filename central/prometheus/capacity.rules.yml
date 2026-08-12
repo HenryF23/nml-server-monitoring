@@ -19,3 +19,10 @@ groups:
 
       - record: nml:server_available
         expr: (nml:server_free_gpu_count == bool nml:server_gpu_count) * on (server) (nml:server_cpu_usage_percent < bool 25) * on (server) (nml:server_gpu_count > bool 0)
+
+      # Action-oriented state used by Grafana. Values sort from least to most
+      # usable: 2=in use, 3=CPU busy, 4=has capacity, 5=available.
+      # CPU-only (1) and offline (0) are added by the dashboards because those
+      # states do not have live GPU recording-rule series.
+      - record: nml:server_status
+        expr: 2 + (nml:server_free_gpu_count > bool 0) + (nml:server_free_gpu_count > bool 0) * on (server) (nml:server_cpu_usage_percent < bool 25) + (nml:server_free_gpu_count == bool nml:server_gpu_count) * on (server) (nml:server_cpu_usage_percent < bool 25)
