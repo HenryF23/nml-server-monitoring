@@ -233,7 +233,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "dark-red",
+                "color": "dark-orange",
                 "value": null
               },
               {
@@ -1539,5 +1539,5 @@
   "timezone": "browser",
   "title": "Server Details",
   "uid": "nml-server-detail",
-  "version": 9
+  "version": 10
 }

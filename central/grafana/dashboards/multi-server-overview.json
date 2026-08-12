@@ -46,7 +46,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "dark-red",
+                "color": "dark-orange",
                 "value": null
               },
               {
@@ -1377,5 +1377,5 @@
   "timezone": "browser",
   "title": "GPU Server Availability",
   "uid": "multi-server-overview",
-  "version": 13
+  "version": 14
 }
