@@ -3,7 +3,7 @@
     "list": []
   },
   "description": "Focused GPU, host, and container telemetry for one NML server.",
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
@@ -1516,7 +1516,7 @@
     ]
   },
   "time": {
-    "from": "now-24h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -1528,6 +1528,7 @@
     ],
     "time_options": [
       "1h",
+      "3h",
       "6h",
       "12h",
       "24h",

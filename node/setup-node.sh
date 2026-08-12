@@ -69,6 +69,9 @@ ensure_nvidia_runtime() {
     command -v apt-get >/dev/null 2>&1 || \
         die "Install NVIDIA Container Toolkit, configure the Docker runtime, and rerun setup."
 
+    info "Refreshing APT package indexes..."
+    apt-get update || \
+        die "Could not refresh APT package indexes. Check the configured repositories and rerun setup."
     info "Installing NVIDIA Container Toolkit..."
     apt-get install -y nvidia-container-toolkit || \
         die "Could not install nvidia-container-toolkit. Configure NVIDIA's package repository and rerun setup."
@@ -193,6 +196,10 @@ fi
 chmod 600 .env
 
 tmp_config="$(mktemp prometheus/agent.yml.tmp.XXXXXX)"
+cleanup_tmp_config() {
+    [[ -z "$tmp_config" ]] || rm -f -- "$tmp_config"
+}
+trap cleanup_tmp_config EXIT
 if (( CPU_ONLY )); then
     sed -e '/^  # GPU_SCRAPE_JOB$/d' \
         -e "s|__CENTRAL_IP__|${CENTRAL_IP}|" \
@@ -207,7 +214,6 @@ else
 fi
 chown 65534:65534 "$tmp_config"
 chmod 444 "$tmp_config"
-mv "$tmp_config" prometheus/agent.yml
 
 info "Using Docker's built-in bridge with one shared network namespace; no Compose network will be created."
 info "Using Docker data root $DOCKER_ROOT_DIR for cAdvisor."
@@ -218,7 +224,13 @@ if (( CPU_ONLY )); then
 else
     docker compose --profile gpu pull
 fi
-docker compose run --rm --no-deps --entrypoint /bin/promtool prometheus-agent \
+prometheus_version="$(read_env PROMETHEUS_VERSION)"
+prometheus_version="${prometheus_version:-v3.13.2}"
+docker run --rm --network none \
+    --env "SERVER_NAME=${SERVER_NAME}" \
+    --entrypoint /bin/promtool \
+    --mount "type=bind,src=${PWD}/${tmp_config},dst=/etc/prometheus/agent.yml,readonly" \
+    "prom/prometheus:${prometheus_version}" \
     check config /etc/prometheus/agent.yml >/dev/null
 
 if (( ! CPU_ONLY )); then
@@ -242,14 +254,17 @@ if command -v curl >/dev/null 2>&1; then
     fi
 fi
 
+mv "$tmp_config" prometheus/agent.yml
+tmp_config=""
+
 if (( CPU_ONLY )); then
     docker compose --profile gpu stop dcgm-exporter >/dev/null 2>&1 || true
     docker compose --profile gpu rm -f dcgm-exporter >/dev/null 2>&1 || true
     info "Starting host and container monitoring..."
-    docker compose up -d --remove-orphans
+    docker compose up -d --remove-orphans --force-recreate
 else
     info "Starting host, container, and GPU monitoring..."
-    docker compose --profile gpu up -d --remove-orphans
+    docker compose --profile gpu up -d --remove-orphans --force-recreate
 fi
 
 echo

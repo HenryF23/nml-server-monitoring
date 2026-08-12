@@ -31,14 +31,15 @@ Every server needs:
 - a resolvable central hostname or a reachable central IPv4 address
 
 Install Tailscale on the central and monitored servers for the default setup.
-Without Tailscale, central falls back to all host IPv4 interfaces and nodes use
-system DNS or an explicit LAN address.
+Without Tailscale, central setup fails closed until you explicitly select a LAN
+address or `0.0.0.0`; nodes can use system DNS or an explicit LAN address.
 
 GPU monitoring is the default. GPU servers also need a working NVIDIA driver
 and NVIDIA Container Toolkit with the `nvidia` runtime registered in Docker.
 On Debian or Ubuntu, install and configure it with:
 
 ```bash
+sudo apt-get update
 sudo apt-get install -y nvidia-container-toolkit
 sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
@@ -57,8 +58,9 @@ cd central
 
 The script detects the central server's Tailscale IPv4 address and publishes
 Prometheus and Grafana only on that host interface. If Tailscale is unavailable,
-it warns and publishes on all IPv4 interfaces. It also generates the Grafana
-administrator password in `central/.env`.
+it stops instead of exposing unauthenticated Prometheus automatically. Select a
+LAN address or explicitly select all interfaces as shown below. Setup also
+generates the Grafana administrator password in `central/.env`.
 
 To select a LAN or other host interface explicitly:
 
@@ -81,8 +83,9 @@ both LAN and Tailscale), use:
 This saves `CENTRAL_BIND_ADDRESS=0.0.0.0`. It controls the host IP used by
 Docker's published ports; Grafana and Prometheus listen on all interfaces only
 inside their shared container network namespace. It does not choose the URL
-Grafana puts in generated links. Because TCP `9090` and `3000` are then
-reachable on every permitted host interface, restrict them with
+Grafana puts in generated links. Because Prometheus TCP `9090` and Grafana TCP
+`GRAFANA_PORT` (`3000` by default) are then reachable on every permitted host
+interface, restrict them with
 Docker-compatible firewall rules or an upstream network firewall.
 
 For Grafana-generated share/external URLs, set the browser-facing root URL in
@@ -96,12 +99,12 @@ GRAFANA_ROOT_URL=http://142.58.10.57:3000
 change port publication or network reachability. It is optional, but Grafana's
 default root URL is `http://localhost:3000`; set it when clients use another
 hostname, address, port, HTTPS proxy, or subpath. Recreate Grafana after changing
-it with `docker compose up -d --force-recreate grafana`.
+it with `docker compose up -d --no-deps --force-recreate grafana`.
 
 After upgrading from the earlier host-networked central stack, run
 `./setup-central.sh` once instead of starting Compose directly. The script
-rewrites Grafana's internal Prometheus URL for bridge networking and recreates
-both containers while preserving their named volumes.
+removes the legacy datasource override and recreates both containers while
+preserving their named volumes.
 
 ## 2. Add a monitored server
 
@@ -155,8 +158,9 @@ shared bridge namespace while preserving the Prometheus Agent volume.
 
 New servers normally appear in Grafana within 30 seconds.
 
-The central and node stacks can run on the same host; their ports do not
-overlap.
+With the default ports, the central and node stacks can run on the same host
+without port conflicts. Do not set `GRAFANA_PORT=9095` on such a host because
+the node Agent publishes that port on loopback.
 
 Node setup also reads Docker's actual data directory from `docker info` and
 mounts that directory read-only into cAdvisor. Custom Docker roots therefore
@@ -186,8 +190,9 @@ cd node
 ./verify-node.sh
 ```
 
-A GPU server should report four `UP` targets. A CPU-only server should report
-three.
+Verification requires `curl` and `python3`. A GPU server must report exactly
+four `UP` targets; a CPU-only server must report exactly three. The command also
+checks that central Prometheus is reachable from the node host.
 
 Node Exporter reads the host root filesystem through a read-only bind mount.
 If you attach or mount a new filesystem after the node stack has started,
@@ -207,7 +212,7 @@ cd central
 Open Grafana at `http://<central-host>:3000` (or the configured
 `GRAFANA_PORT`), then select
 **NML → GPU Server Availability**. All provisioned dashboards and their
-navigation links use the latest 24 hours.
+navigation links default to the latest three hours.
 
 The first screen is designed for choosing a server:
 
@@ -232,7 +237,7 @@ is unavailable when the host exposes no supported hwmon sensor. Disk usage
 remains in **Server Details**, and Tailscale IPs are intentionally omitted. The
 GPU model summary assumes the GPUs within one server share a model.
 
-Click a server name in the table to open **Server Details** for the latest 24
+Click a server name in the table to open **Server Details** for the latest three
 hours. That view shows per-GPU inventory, compute, VRAM,
 temperature and power history, host CPU/RAM/disk history, and the busiest
 application containers. Its **Server** selector switches directly between
@@ -249,7 +254,7 @@ central ports only on the detected Tailscale address, limiting them to the
 private tailnet. Grafana requires its generated administrator password;
 Prometheus remote write does not have application-level authentication. Use
 Tailscale access controls so monitored servers can reach TCP `9090` and only
-administrators can reach TCP `3000`.
+administrators can reach Grafana TCP `GRAFANA_PORT` (`3000` by default).
 
 If Tailscale is unavailable or you explicitly bind to `0.0.0.0`, restrict both
 ports and use the setup only on a trusted private LAN. On Linux, Docker-published
@@ -279,6 +284,15 @@ avoids allocating subnets from Docker's `default-address-pools` and cannot
 trigger Compose subnet exhaustion from this stack. Other Docker research
 projects can still create bridge networks and must follow your site's
 address-pool rule.
+
+This use of Docker's built-in bridge is intentional because the host cannot
+allocate another subnet. Unlike a user-defined bridge, the default bridge gives
+weaker isolation from unrelated containers attached to it. Use this deployment
+only when other containers on the Docker host are trusted.
+
+Provisioned dashboards are read-only in Grafana. Edit the JSON files in
+`central/grafana/dashboards/` to make durable changes; Grafana scans those files
+for updates every 30 seconds.
 
 The Docker-published central ports and node Agent status port must be free on
 their configured host addresses. Existing Nginx is unaffected unless it already

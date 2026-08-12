@@ -3,7 +3,7 @@
     "list": []
   },
   "description": "At-a-glance GPU capacity for NML, including partially configured servers whose GPU status metrics are missing.",
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
@@ -1369,7 +1369,7 @@
     "list": []
   },
   "time": {
-    "from": "now-24h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -1381,6 +1381,7 @@
     ],
     "time_options": [
       "1h",
+      "3h",
       "6h",
       "12h",
       "24h",

@@ -12,9 +12,9 @@ usage() {
 Usage:
   ./setup-central.sh [--bind-address IPV4 | --auto-bind]
 
-Automatic binding prefers this server's Tailscale IPv4 address and falls back
-to all IPv4 interfaces when Tailscale is unavailable. --bind-address selects
-and saves one address explicitly; --auto-bind returns to automatic selection.
+Automatic binding requires this server's Tailscale IPv4 address. Use
+--bind-address with a LAN address or 0.0.0.0 when Tailscale is unavailable.
+The selected address is saved; --auto-bind returns to automatic selection.
 EOF
 }
 
@@ -88,6 +88,13 @@ set_env() {
     mv "$tmp" .env
 }
 
+remove_env() {
+    local key="$1" tmp
+    tmp="$(mktemp .env.tmp.XXXXXX)"
+    awk -v key="$key" 'index($0, key "=") != 1 { print }' .env >"$tmp"
+    mv "$tmp" .env
+}
+
 if [[ ! -f .env ]]; then
     cp .env.example .env
     info "Created central/.env."
@@ -112,15 +119,14 @@ else
     if is_tailscale_ipv4 "$BIND_ADDRESS"; then
         info "Detected local Tailscale address $BIND_ADDRESS."
     else
-        BIND_ADDRESS="0.0.0.0"
-        warn "Tailscale is unavailable; falling back to all host IPv4 interfaces."
+        die "Tailscale IPv4 is unavailable. Select a LAN address with --bind-address IPV4, or explicitly publish on every IPv4 interface with --bind-address 0.0.0.0."
     fi
 fi
 
 is_ipv4 "$BIND_ADDRESS" || die "Invalid --bind-address '$BIND_ADDRESS'."
 set_env CENTRAL_BIND_MODE "$BIND_MODE"
 set_env CENTRAL_BIND_ADDRESS "$BIND_ADDRESS"
-set_env GRAFANA_PROMETHEUS_URL "http://127.0.0.1:9090"
+remove_env GRAFANA_PROMETHEUS_URL
 
 grafana_password="$(read_env GRAFANA_ADMIN_PASSWORD)"
 if [[ -z "$grafana_password" || "$grafana_password" == "CHANGE_ME" ]]; then
@@ -129,10 +135,12 @@ if [[ -z "$grafana_password" || "$grafana_password" == "CHANGE_ME" ]]; then
 fi
 chmod 600 .env
 
+grafana_port="$(read_env GRAFANA_PORT)"
+grafana_port="${grafana_port:-3000}"
 info "Publishing central services on $BIND_ADDRESS from a shared built-in bridge network namespace."
 if [[ "$BIND_ADDRESS" == "0.0.0.0" ]]; then
     warn "Prometheus and Grafana will be published on every host IPv4 interface."
-    warn "Allow TCP 9090/3000 only from trusted LAN or Tailscale clients."
+    warn "Allow Prometheus TCP 9090 and Grafana TCP ${grafana_port} only from trusted clients."
 fi
 docker compose config >/dev/null
 ok "Compose configuration is valid."
@@ -151,8 +159,6 @@ echo
 docker compose ps
 echo
 
-grafana_port="$(read_env GRAFANA_PORT)"
-grafana_port="${grafana_port:-3000}"
 admin_user="$(read_env GRAFANA_ADMIN_USER)"
 admin_user="${admin_user:-admin}"
 central_host="$(hostname -s)"
