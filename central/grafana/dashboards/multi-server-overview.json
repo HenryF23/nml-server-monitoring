@@ -2,7 +2,7 @@
   "annotations": {
     "list": []
   },
-  "description": "At-a-glance GPU capacity for NML, distinguishing fully available, partially available, CPU-constrained, fully occupied, and offline servers.",
+  "description": "At-a-glance GPU capacity for NML, including partially configured servers whose GPU status metrics are missing.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -283,7 +283,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Current scheduling view. Available requires every GPU to be free and host CPU below 25%; Free GPUs shows usable individual devices.",
+      "description": "Scheduling view with the highest current GPU and CPU temperatures. CPU temperature is blank when Linux exposes no supported hwmon CPU sensor.",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -313,7 +313,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 132
+                "value": 160
               },
               {
                 "id": "custom.align",
@@ -359,6 +359,11 @@
                         "color": "dark-green",
                         "index": 5,
                         "text": "AVAILABLE"
+                      },
+                      "6": {
+                        "color": "dark-purple",
+                        "index": 6,
+                        "text": "METRICS MISSING"
                       }
                     },
                     "type": "value"
@@ -393,6 +398,10 @@
                     {
                       "color": "dark-green",
                       "value": 5
+                    },
+                    {
+                      "color": "dark-purple",
+                      "value": 6
                     }
                   ]
                 }
@@ -405,10 +414,6 @@
               "options": "Server"
             },
             "properties": [
-              {
-                "id": "custom.width",
-                "value": 160
-              },
               {
                 "id": "custom.cellOptions",
                 "value": {
@@ -504,7 +509,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "/^(GPU|VRAM|CPU|RAM|Disk)$/"
+              "options": "/^(GPU Compute|VRAM Used|CPU|RAM)$/"
             },
             "properties": [
               {
@@ -538,7 +543,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "GPU"
+              "options": "GPU Compute"
             },
             "properties": [
               {
@@ -566,7 +571,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "VRAM"
+              "options": "VRAM Used"
             },
             "properties": [
               {
@@ -621,8 +626,8 @@
           },
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/^(RAM|Disk)$/"
+              "id": "byName",
+              "options": "RAM"
             },
             "properties": [
               {
@@ -650,7 +655,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Temp"
+              "options": "GPU Temp"
             },
             "properties": [
               {
@@ -689,7 +694,53 @@
               },
               {
                 "id": "custom.width",
-                "value": 80
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CPU Temp"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "celsius"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 75
+                    },
+                    {
+                      "color": "red",
+                      "value": 90
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 90
               }
             ]
           }
@@ -724,7 +775,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "nml:server_status{server=~\"${server:regex}\"} or on (server) (1 * max by (server) (up{job=\"node-exporter\",gpu=\"false\",server=~\"${server:regex}\"})) or on (server) (2 * max by (server) (up{job=\"node-exporter\",gpu=\"true\",server=~\"${server:regex}\"})) or on (server) (0 * max by (server) (max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h])))",
+          "expr": "nml:server_status{server=~\"${server:regex}\"} or on (server) (1 * max by (server) (up{job=\"node-exporter\",gpu=\"false\",server=~\"${server:regex}\"})) or on (server) (6 * max by (server) (up{job=\"node-exporter\",server=~\"${server:regex}\"})) or on (server) (0 * max by (server) (max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h])))",
           "format": "table",
           "instant": true,
           "range": false,
@@ -788,7 +839,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "100 * (1 - node_filesystem_avail_bytes{server=~\"${server:regex}\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{server=~\"${server:regex}\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"})",
+          "expr": "nml:server_cpu_temperature_celsius{server=~\"${server:regex}\"}",
           "format": "table",
           "instant": true,
           "range": false,
@@ -835,12 +886,12 @@
               "Value #A": "Status",
               "Value #B": "GPUs",
               "Value #C": "Free GPUs",
-              "Value #D": "GPU",
-              "Value #E": "VRAM",
+              "Value #D": "GPU Compute",
+              "Value #E": "VRAM Used",
               "Value #F": "CPU",
               "Value #G": "RAM",
-              "Value #H": "Temp",
-              "Value #I": "Disk",
+              "Value #H": "GPU Temp",
+              "Value #I": "CPU Temp",
               "modelName": "GPU Model",
               "server": "Server"
             }
@@ -1276,5 +1327,5 @@
   "timezone": "browser",
   "title": "GPU Server Availability",
   "uid": "multi-server-overview",
-  "version": 4
+  "version": 7
 }

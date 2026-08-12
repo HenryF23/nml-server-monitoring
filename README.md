@@ -33,12 +33,17 @@ system DNS or an explicit LAN address.
 
 GPU monitoring is the default. GPU servers also need a working NVIDIA driver
 and NVIDIA Container Toolkit with the `nvidia` runtime registered in Docker.
-If the runtime is not listed by `docker info`, configure it before node setup:
+On Debian or Ubuntu, install and configure it with:
 
 ```bash
+sudo apt-get install -y nvidia-container-toolkit
 sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
 ```
+
+The NVIDIA package repository must already be configured. If the `nvidia`
+runtime is missing, `setup-node.sh` runs these steps automatically; restarting
+Docker can briefly interrupt other containers on that server.
 
 ## 1. Start the central server
 
@@ -169,6 +174,7 @@ The first screen is designed for choosing a server:
 - **CPU Busy** means GPUs are free but host CPU usage is at least 25%.
 - **In Use** means no GPU currently meets the free threshold.
 - **CPU Only** identifies a node intentionally installed with `--cpu-only`.
+- **Metrics Missing** means node monitoring is online but GPU status is absent.
 - **Offline** means a server was seen within 24 hours but has no current data.
 
 A GPU is considered free when its five-minute average compute and VRAM usage
@@ -176,9 +182,11 @@ are both below 10%. The **Free GPUs** column shows the exact usable count, so a
 four-GPU server with two occupied GPUs and low host CPU is shown as
 **Has Capacity · 2 free**.
 
-The server table shows GPU model and count, free GPUs, GPU and VRAM use, CPU,
-RAM, temperature, and root-disk use. The **Servers** selector filters every
-overview panel and supports one or several servers.
+The server table shows GPU model and count, free GPUs, GPU compute, VRAM, CPU,
+RAM, and the hottest GPU and CPU temperatures. CPU temperature is blank when
+the host does not expose a supported hwmon sensor. Disk usage remains available
+in **Server Details**; Tailscale IPs are intentionally omitted. The **Servers**
+selector filters every overview panel and supports one or several servers.
 
 Click a server name in the table to open **Server Details** with the current
 time range preserved. That view shows per-GPU inventory, compute, VRAM,

@@ -5,6 +5,11 @@ groups:
       - record: nml:server_cpu_usage_percent
         expr: 100 - avg by (server) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100
 
+      # Hottest CPU sensor reported by the standard Linux hwmon drivers.
+      # Servers without a supported sensor simply have no value.
+      - record: nml:server_cpu_temperature_celsius
+        expr: max by (server) (node_hwmon_temp_celsius{job="node-exporter"} * on (server, chip) group_left() node_hwmon_chip_names{job="node-exporter",chip_name=~"coretemp|k10temp|zenpower|cpu_thermal"})
+
       - record: nml:gpu_utilization_percent
         expr: avg_over_time(DCGM_FI_DEV_GPU_UTIL[5m])
 
@@ -22,7 +27,7 @@ groups:
 
       # Action-oriented state used by Grafana. Values sort from least to most
       # usable: 2=in use, 3=CPU busy, 4=has capacity, 5=available.
-      # CPU-only (1) and offline (0) are added by the dashboards because those
-      # states do not have live GPU recording-rule series.
+      # CPU-only (1), offline (0), and missing GPU metrics (6) are added by the
+      # dashboards because those states do not have live GPU rule series.
       - record: nml:server_status
         expr: 2 + (nml:server_free_gpu_count > bool 0) + (nml:server_free_gpu_count > bool 0) * on (server) (nml:server_cpu_usage_percent < bool 25) + (nml:server_free_gpu_count == bool nml:server_gpu_count) * on (server) (nml:server_cpu_usage_percent < bool 25)

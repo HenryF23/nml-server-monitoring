@@ -58,6 +58,36 @@ resolve_central_host() {
     die "Central host '$host' is unknown to Tailscale and did not resolve through system DNS."
 }
 
+has_nvidia_runtime() {
+    docker info --format '{{json .Runtimes}}' 2>/dev/null | grep -q '"nvidia"'
+}
+
+ensure_nvidia_runtime() {
+    has_nvidia_runtime && return 0
+
+    warn "The NVIDIA runtime is not registered with Docker."
+    command -v apt-get >/dev/null 2>&1 || \
+        die "Install NVIDIA Container Toolkit, configure the Docker runtime, and rerun setup."
+
+    info "Installing NVIDIA Container Toolkit..."
+    apt-get install -y nvidia-container-toolkit || \
+        die "Could not install nvidia-container-toolkit. Configure NVIDIA's package repository and rerun setup."
+    command -v nvidia-ctk >/dev/null 2>&1 || \
+        die "nvidia-ctk is unavailable after installing NVIDIA Container Toolkit."
+
+    info "Configuring the NVIDIA runtime for Docker..."
+    nvidia-ctk runtime configure --runtime=docker || \
+        die "Could not configure the NVIDIA runtime for Docker."
+    command -v systemctl >/dev/null 2>&1 || \
+        die "Restart Docker, then rerun setup."
+
+    warn "Restarting Docker to activate the NVIDIA runtime."
+    systemctl restart docker || die "Could not restart Docker."
+    docker info >/dev/null 2>&1 || die "Docker did not become available after restart."
+    has_nvidia_runtime || die "Docker restarted, but the NVIDIA runtime is still unavailable."
+    ok "NVIDIA Container Toolkit is configured for Docker."
+}
+
 SERVER_NAME=""
 CENTRAL_IP=""
 CENTRAL_HOST=""
@@ -91,23 +121,22 @@ command -v docker >/dev/null 2>&1 || die "Docker is not installed."
 docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is required."
 docker info >/dev/null 2>&1 || die "Cannot connect to the Docker daemon."
 
-DOCKER_ROOT_DIR="$(docker info --format '{{.DockerRootDir}}')"
-[[ "$DOCKER_ROOT_DIR" == /* && "$DOCKER_ROOT_DIR" != "/" ]] || \
-    die "Docker returned an invalid data root: '$DOCKER_ROOT_DIR'."
-[[ -d "$DOCKER_ROOT_DIR" ]] || \
-    die "Docker data root does not exist: '$DOCKER_ROOT_DIR'."
-
 if (( ! CPU_ONLY )); then
     gpu_error="If this is intentionally a CPU-only server, rerun with --cpu-only."
     command -v nvidia-smi >/dev/null 2>&1 || \
         die "No NVIDIA driver or GPU was found. $gpu_error"
     nvidia-smi >/dev/null 2>&1 || \
         die "The NVIDIA GPU is installed but cannot be accessed. $gpu_error"
-    docker info --format '{{json .Runtimes}}' | grep -q '"nvidia"' || \
-        die "The NVIDIA runtime is not registered with Docker. Configure it with 'sudo nvidia-ctk runtime configure --runtime=docker', restart Docker, and rerun setup. $gpu_error"
+    ensure_nvidia_runtime
 else
     info "CPU-only mode selected; GPU metrics will be disabled."
 fi
+
+DOCKER_ROOT_DIR="$(docker info --format '{{.DockerRootDir}}')"
+[[ "$DOCKER_ROOT_DIR" == /* && "$DOCKER_ROOT_DIR" != "/" ]] || \
+    die "Docker returned an invalid data root: '$DOCKER_ROOT_DIR'."
+[[ -d "$DOCKER_ROOT_DIR" ]] || \
+    die "Docker data root does not exist: '$DOCKER_ROOT_DIR'."
 
 read_env() {
     local key="$1"

@@ -44,7 +44,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Available: all GPUs free and CPU below 25%. Has Capacity: some GPUs free and CPU below 25%. CPU Busy: GPUs are free but CPU is at least 25%. In Use: no free GPUs.",
+      "description": "Available: all GPUs free and CPU below 25%. Has Capacity: some GPUs free and CPU below 25%. Metrics Missing: node metrics are online but GPU status is absent.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -82,6 +82,11 @@
                   "color": "dark-green",
                   "index": 5,
                   "text": "AVAILABLE"
+                },
+                "6": {
+                  "color": "dark-purple",
+                  "index": 6,
+                  "text": "METRICS MISSING"
                 }
               },
               "type": "value"
@@ -113,6 +118,10 @@
               {
                 "color": "dark-green",
                 "value": 5
+              },
+              {
+                "color": "dark-purple",
+                "value": 6
               }
             ]
           }
@@ -145,7 +154,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "max(nml:server_status{server=~\"${server:regex}\"}) or (1 * max(up{job=\"node-exporter\",gpu=\"false\",server=~\"${server:regex}\"})) or (2 * max(up{job=\"node-exporter\",gpu=\"true\",server=~\"${server:regex}\"})) or (0 * max(max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h])))",
+          "expr": "max(nml:server_status{server=~\"${server:regex}\"}) or (1 * max(up{job=\"node-exporter\",gpu=\"false\",server=~\"${server:regex}\"})) or (6 * max(up{job=\"node-exporter\",server=~\"${server:regex}\"})) or (0 * max(max_over_time(up{job=\"node-exporter\",server=~\"${server:regex}\"}[24h])))",
           "instant": true,
           "legendFormat": "Status",
           "range": false,
@@ -1495,5 +1504,5 @@
   "timezone": "browser",
   "title": "Server Details",
   "uid": "nml-server-detail",
-  "version": 2
+  "version": 3
 }

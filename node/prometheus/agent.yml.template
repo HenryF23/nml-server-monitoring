@@ -17,6 +17,7 @@ scrape_configs:
           - 127.0.0.1:9100
 
   - job_name: cadvisor
+    honor_timestamps: false
     static_configs:
       - targets:
           - 127.0.0.1:18080
