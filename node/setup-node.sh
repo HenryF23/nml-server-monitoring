@@ -64,6 +64,7 @@ CENTRAL_HOST=""
 RESOLVED_CENTRAL_IP=""
 RESOLUTION_METHOD=""
 CPU_ONLY=0
+DEFAULT_DCGM_EXPORTER_TAG="4.6.0-4.8.3"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -103,7 +104,7 @@ if (( ! CPU_ONLY )); then
     nvidia-smi >/dev/null 2>&1 || \
         die "The NVIDIA GPU is installed but cannot be accessed. $gpu_error"
     docker info --format '{{json .Runtimes}}' | grep -q '"nvidia"' || \
-        die "NVIDIA Container Toolkit is not configured for Docker. $gpu_error"
+        die "The NVIDIA runtime is not registered with Docker. Configure it with 'sudo nvidia-ctk runtime configure --runtime=docker', restart Docker, and rerun setup. $gpu_error"
 else
     info "CPU-only mode selected; GPU metrics will be disabled."
 fi
@@ -151,6 +152,14 @@ set_env SERVER_NAME "$SERVER_NAME"
 set_env CENTRAL_HOST "$CENTRAL_HOST"
 set_env CENTRAL_IP "$CENTRAL_IP"
 set_env DOCKER_ROOT_DIR "$DOCKER_ROOT_DIR"
+
+dcgm_exporter_tag="$(read_env DCGM_EXPORTER_TAG)"
+if [[ -z "$dcgm_exporter_tag" || "$dcgm_exporter_tag" == "latest" ]]; then
+    if [[ "$dcgm_exporter_tag" == "latest" ]]; then
+        info "Replacing the floating DCGM Exporter 'latest' tag with $DEFAULT_DCGM_EXPORTER_TAG."
+    fi
+    set_env DCGM_EXPORTER_TAG "$DEFAULT_DCGM_EXPORTER_TAG"
+fi
 chmod 600 .env
 
 tmp_config="$(mktemp prometheus/agent.yml.tmp.XXXXXX)"
@@ -181,6 +190,15 @@ else
 fi
 docker compose run --rm --no-deps --entrypoint /bin/promtool prometheus-agent \
     check config /etc/prometheus/agent.yml >/dev/null
+
+if (( ! CPU_ONLY )); then
+    info "Checking NVIDIA GPU access from Docker..."
+    if ! docker compose --profile gpu run --rm --no-deps \
+        --entrypoint nvidia-smi dcgm-exporter -L >/dev/null; then
+        die "Docker cannot access the NVIDIA GPU through the NVIDIA runtime. Check the NVIDIA driver and Container Toolkit configuration; use --cpu-only only when this server intentionally has no GPU."
+    fi
+    ok "NVIDIA GPU access from Docker is working."
+fi
 
 if command -v curl >/dev/null 2>&1; then
     if curl -fsS --max-time 5 "http://${CENTRAL_IP}:9090/-/ready" >/dev/null; then

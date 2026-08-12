@@ -35,15 +35,16 @@ services:
       - --port=18080
 
   dcgm-exporter:
-    image: nvcr.io/nvidia/k8s/dcgm-exporter:${DCGM_EXPORTER_TAG:-latest}
+    image: nvcr.io/nvidia/k8s/dcgm-exporter:${DCGM_EXPORTER_TAG:-4.6.0-4.8.3}
     restart: unless-stopped
     profiles:
       - gpu
     network_mode: host
     cap_add:
       - SYS_ADMIN
-    gpus: all
+    runtime: nvidia
     environment:
+      NVIDIA_VISIBLE_DEVICES: all
       DCGM_EXPORTER_LISTEN: 127.0.0.1:9400
 
   # All collectors share the host network but listen only on loopback. The

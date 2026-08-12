@@ -32,7 +32,13 @@ Without Tailscale, central falls back to all host IPv4 interfaces and nodes use
 system DNS or an explicit LAN address.
 
 GPU monitoring is the default. GPU servers also need a working NVIDIA driver
-and NVIDIA Container Toolkit configured for Docker.
+and NVIDIA Container Toolkit with the `nvidia` runtime registered in Docker.
+If the runtime is not listed by `docker info`, configure it before node setup:
+
+```bash
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+```
 
 ## 1. Start the central server
 
@@ -110,6 +116,10 @@ overlap.
 Node setup also reads Docker's actual data directory from `docker info` and
 mounts that directory read-only into cAdvisor. Custom Docker roots therefore
 need no manual Compose edits, and missing paths are never created silently.
+On GPU nodes it also starts a temporary DCGM Exporter container and runs
+`nvidia-smi -L`, so setup fails before deployment if Docker cannot access the
+GPU. All nodes use the same NVIDIA runtime configuration; no per-server
+Compose changes or CDI/legacy detection are needed.
 
 ### CPU-only exception
 
@@ -222,7 +232,9 @@ cd node && sudo docker compose --profile gpu down
 ```
 
 Prometheus retention defaults to 30 days. Image versions, retention, and the
-Grafana port can be changed in the generated `.env` files.
+Grafana port can be changed in the generated `.env` files. DCGM Exporter is
+pinned to `4.6.0-4.8.3`; setup replaces older saved `latest` values with that
+pin while preserving explicit custom version tags.
 
 ## Remove old host installations
 
