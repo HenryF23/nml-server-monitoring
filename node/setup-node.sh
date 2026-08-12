@@ -10,9 +10,11 @@ die()  { printf '\033[1;31m[FAIL]\033[0m %s\n' "$*" >&2; exit 1; }
 usage() {
     cat <<'EOF'
 Usage:
+  sudo ./setup-node.sh --central-host HOSTNAME [--name NAME] [--cpu-only]
   sudo ./setup-node.sh --central-ip TAILSCALE_IP [--name NAME] [--cpu-only]
 
-The central IP is saved after the first run. GPU monitoring is the default.
+The central host or IP is saved after the first run. --central-host resolves a
+Tailscale MagicDNS name such as cs-nmg-lam01s. GPU monitoring is the default.
 Use --cpu-only only on a server without an NVIDIA GPU.
 EOF
 }
@@ -25,17 +27,36 @@ is_tailscale_ipv4() {
     (( a == 100 && b >= 64 && b <= 127 && c <= 255 && d <= 255 ))
 }
 
+resolve_central_host() {
+    local host="$1" candidate
+    [[ "$host" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]] || \
+        die "Invalid central hostname '$host'."
+    command -v getent >/dev/null 2>&1 || \
+        die "getent is required to resolve --central-host."
+
+    while read -r candidate _; do
+        if is_tailscale_ipv4 "$candidate"; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done < <({ getent ahostsv4 "$host" || getent hosts "$host"; } 2>/dev/null || true)
+
+    die "Central host '$host' did not resolve to a Tailscale IPv4 address (100.64.0.0/10)."
+}
+
 SERVER_NAME=""
 CENTRAL_TAILSCALE_IP=""
+CENTRAL_HOST=""
 CPU_ONLY=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --name|--central-ip)
+        --name|--central-ip|--central-host)
             [[ $# -ge 2 ]] || die "$1 requires a value"
             case "$1" in
                 --name) SERVER_NAME="$2" ;;
                 --central-ip) CENTRAL_TAILSCALE_IP="$2" ;;
+                --central-host) CENTRAL_HOST="$2" ;;
             esac
             shift 2
             ;;
@@ -44,6 +65,9 @@ while [[ $# -gt 0 ]]; do
         *) die "Unknown option: $1" ;;
     esac
 done
+
+[[ -z "$CENTRAL_TAILSCALE_IP" || -z "$CENTRAL_HOST" ]] || \
+    die "Use either --central-host or --central-ip, not both."
 
 [[ $EUID -eq 0 ]] || die "Run this script with sudo/root."
 command -v docker >/dev/null 2>&1 || die "Docker is not installed."
@@ -86,16 +110,28 @@ set_env() {
 
 SERVER_NAME="${SERVER_NAME:-$(read_env SERVER_NAME)}"
 SERVER_NAME="${SERVER_NAME:-$(hostname -s)}"
-CENTRAL_TAILSCALE_IP="${CENTRAL_TAILSCALE_IP:-$(read_env CENTRAL_TAILSCALE_IP)}"
+
+if [[ -z "$CENTRAL_HOST" && -z "$CENTRAL_TAILSCALE_IP" ]]; then
+    CENTRAL_HOST="$(read_env CENTRAL_HOST)"
+    if [[ -z "$CENTRAL_HOST" ]]; then
+        CENTRAL_TAILSCALE_IP="$(read_env CENTRAL_TAILSCALE_IP)"
+    fi
+fi
+
+if [[ -n "$CENTRAL_HOST" ]]; then
+    CENTRAL_TAILSCALE_IP="$(resolve_central_host "$CENTRAL_HOST")"
+    info "Resolved central host '$CENTRAL_HOST' to $CENTRAL_TAILSCALE_IP."
+fi
 
 [[ "$SERVER_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || \
     die "Invalid server name '$SERVER_NAME'."
 is_tailscale_ipv4 "$CENTRAL_TAILSCALE_IP" || \
-    die "Provide the central server's Tailscale IPv4 with --central-ip (100.64.0.0/10)."
+    die "Provide --central-host HOSTNAME or --central-ip with a Tailscale IPv4 address."
 
 [[ -f .env ]] || cp .env.example .env
 set_env SERVER_NAME "$SERVER_NAME"
 set_env TAILSCALE_IP "$TAILSCALE_IP"
+set_env CENTRAL_HOST "$CENTRAL_HOST"
 set_env CENTRAL_TAILSCALE_IP "$CENTRAL_TAILSCALE_IP"
 chmod 600 .env
 
@@ -146,7 +182,12 @@ fi
 echo
 docker compose --profile gpu ps
 echo
-ok "'$SERVER_NAME' is configured to send metrics to ${CENTRAL_TAILSCALE_IP} over Tailscale."
+ok "'$SERVER_NAME' is configured to send metrics over Tailscale."
+if [[ -n "$CENTRAL_HOST" ]]; then
+    echo "Central : ${CENTRAL_HOST} (${CENTRAL_TAILSCALE_IP})"
+else
+    echo "Central : ${CENTRAL_TAILSCALE_IP}"
+fi
 echo "Node IP : ${TAILSCALE_IP}"
 echo "Mode    : $( (( CPU_ONLY )) && echo CPU-only || echo GPU )"
 echo "Verify  : ./verify-node.sh"

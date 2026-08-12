@@ -43,17 +43,25 @@ command. It generates the Grafana administrator password in `central/.env`.
 
 ## 2. Add a monitored server
 
-Copy `node/` to the server and use the central Tailscale IP printed above:
+Copy `node/` to the server. With Tailscale MagicDNS, use the central server's
+short hostname:
 
 ```bash
 cd node
-sudo ./setup-node.sh \
-  --central-ip 100.x.y.z \
-  --name "$(hostname -s)"
+sudo ./setup-node.sh --central-host cs-nmg-lam01s
 ```
 
-`--name` is optional: setup already uses `hostname -s` automatically. It is
-shown above to make the resolved server name explicit.
+The script resolves the hostname to its `100.x.y.z` Tailscale address and
+saves both values. On later runs it resolves the saved hostname again.
+
+If MagicDNS is unavailable, the Tailscale IP remains supported:
+
+```bash
+sudo ./setup-node.sh --central-ip 100.x.y.z
+```
+
+The monitored server name is resolved automatically with `hostname -s`. Use
+`--name gpu-server-01` only when you want to override it.
 
 If the central server also monitors itself, resolve both its Tailscale IP and
 server name automatically:
@@ -61,18 +69,17 @@ server name automatically:
 ```bash
 cd node
 sudo ./setup-node.sh \
-  --central-ip "$(tailscale ip -4)" \
-  --name "$(hostname -s)"
+  --central-host "$(hostname -s)"
 ```
 
-The short hostname is used as the Grafana server label. Override it when
-needed:
+To override the Grafana server label explicitly:
 
 ```bash
-sudo ./setup-node.sh --central-ip 100.x.y.z --name gpu-server-01
+sudo ./setup-node.sh --central-host cs-nmg-lam01s --name gpu-server-01
 ```
 
-The central IP is saved in `node/.env`, so later GPU-node updates need only:
+The central host and resolved IP are saved in `node/.env`, so later GPU-node
+updates need only:
 
 ```bash
 sudo ./setup-node.sh
@@ -89,7 +96,7 @@ Setup stops with a clear error if an NVIDIA GPU, driver, or container runtime
 is unavailable. Only for an intentionally CPU-only server, use:
 
 ```bash
-sudo ./setup-node.sh --central-ip 100.x.y.z --cpu-only
+sudo ./setup-node.sh --central-host cs-nmg-lam01s --cpu-only
 ```
 
 Continue passing `--cpu-only` on later updates.

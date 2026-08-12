@@ -81,6 +81,7 @@ grafana_port="$(read_env GRAFANA_PORT)"
 grafana_port="${grafana_port:-3000}"
 admin_user="$(read_env GRAFANA_ADMIN_USER)"
 admin_user="${admin_user:-admin}"
+central_host="$(hostname -s)"
 
 ok "Central monitoring is ready on Tailscale."
 echo
@@ -91,7 +92,10 @@ echo
 echo "Show the generated Grafana password later with:"
 echo "  grep '^GRAFANA_ADMIN_PASSWORD=' .env"
 echo
-echo "Run this once from node/ on each monitored server:"
+echo "Run this once from node/ on each monitored server (Tailscale MagicDNS):"
+echo "  sudo ./setup-node.sh --central-host '${central_host}'"
+echo
+echo "IP fallback:"
 echo "  sudo ./setup-node.sh --central-ip '${tailscale_ip}'"
 echo
 echo "The central server can monitor itself with the same command."
