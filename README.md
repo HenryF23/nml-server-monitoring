@@ -4,15 +4,17 @@ Dockerized monitoring for GPU servers, with Tailscale as the preferred private
 transport and LAN IPv4 as an explicit fallback. Adding a server does not
 require editing or restarting central Prometheus.
 
-Each monitored server runs Node Exporter, cAdvisor, NVIDIA DCGM Exporter, and a
-Prometheus Agent. The agent sends metrics to central Prometheus; Grafana
-displays them automatically.
+Each monitored server runs Node Exporter, cAdvisor, and a Prometheus Agent. GPU
+servers also run NVIDIA DCGM Exporter. The agent sends metrics to central
+Prometheus; Grafana displays them automatically.
 
 ```text
 monitored server                         central server
 Node Exporter ─┐                        Prometheus ── Grafana
 cAdvisor ──────┼─ Prometheus Agent ───► central-host:9090
-DCGM Exporter ─┘       Tailscale preferred
+DCGM Exporter* ─┘      Tailscale preferred
+
+* GPU nodes only
 ```
 
 Both stacks use Docker's existing built-in `bridge`, so they do not create
@@ -159,15 +161,16 @@ shared bridge namespace while preserving the Prometheus Agent volume.
 New servers normally appear in Grafana within 30 seconds.
 
 With the default ports, the central and node stacks can run on the same host
-without port conflicts. Do not set `GRAFANA_PORT=9095` on such a host because
-the node Agent publishes that port on loopback.
+without port conflicts. If central is bound to `0.0.0.0`, do not set
+`GRAFANA_PORT=9095` because the node Agent already publishes that port on
+loopback.
 
 Node setup also reads Docker's actual data directory from `docker info` and
 mounts that directory read-only into cAdvisor. Custom Docker roots therefore
 need no manual Compose edits, and missing paths are never created silently.
 On GPU nodes it also starts a temporary DCGM Exporter container and runs
 `nvidia-smi -L`, so setup fails before deployment if Docker cannot access the
-GPU. All nodes use the same NVIDIA runtime configuration; no per-server
+GPU. All GPU nodes use the same NVIDIA runtime configuration; no per-server
 Compose changes or CDI/legacy detection are needed.
 
 ### CPU-only exception
@@ -187,7 +190,7 @@ On a monitored server:
 
 ```bash
 cd node
-./verify-node.sh
+sudo ./verify-node.sh
 ```
 
 Verification requires `curl` and `python3`. A GPU server must report exactly
@@ -229,13 +232,18 @@ are both below 10%. The **Free** column shows the exact usable count, so a
 four-GPU server with two occupied GPUs and low host CPU is shown as
 **Has Capacity · 2 free**.
 
+On the main overview, **GPU Compute** and **VRAM Usage** show the maximum value
+across a server's GPUs at each timestamp; the GPU contributing that maximum can
+change over time. Open **Server Details** to inspect fixed per-GPU traces.
+
 The table is ordered for scheduling: Available, Has Capacity, CPU Busy, In Use,
 CPU Only, Metrics Missing, then Offline. Its columns are **Server**, **Status**,
-**GPU Model**, **GPUs**, **Free**, **GPU Util**, **VRAM**, **CPU**, **Memory**,
-**GPU Temp**, and **CPU Temp**. Missing values display as `N/A`; CPU temperature
-is unavailable when the host exposes no supported hwmon sensor. Disk usage
-remains in **Server Details**, and Tailscale IPs are intentionally omitted. The
-GPU model summary assumes the GPUs within one server share a model.
+**GPU Model**, **GPUs**, **Free**, **GPU Utilization**, **VRAM**, **CPU**,
+**Memory**, **GPU Temp**, **CPU Temp**, and **Total VRAM**. Missing values display
+as `N/A`; CPU temperature is unavailable when the host exposes no supported
+hwmon sensor. Disk usage remains in **Server Details**, and Tailscale IPs are
+intentionally omitted. The GPU model summary assumes the GPUs within one server
+share a model.
 
 Click a server name in the table to open **Server Details** for the latest three
 hours. That view shows per-GPU inventory, compute, VRAM,
@@ -244,8 +252,10 @@ application containers. Its **Server** selector switches directly between
 machines.
 
 **GPU Server Availability · External** is the unfiltered overview intended for
-shared or externally embedded displays. It omits the server selector and
-drill-down links; use the main overview for interactive investigation.
+shared displays that should not expose navigation controls. It omits the server
+selector and drill-down links but still requires Grafana authentication; this
+stack does not enable iframe embedding. Use the main overview for interactive
+investigation.
 
 ## Network and security
 

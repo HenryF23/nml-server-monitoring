@@ -277,4 +277,4 @@ else
     echo "Central : ${CENTRAL_IP}"
 fi
 echo "Mode    : $( (( CPU_ONLY )) && echo CPU-only || echo GPU )"
-echo "Verify  : ./verify-node.sh"
+echo "Verify  : sudo ./verify-node.sh"

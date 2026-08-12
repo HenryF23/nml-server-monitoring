@@ -23,7 +23,7 @@
       },
       "id": 1,
       "options": {
-        "content": "**AVAILABLE** = all GPUs free + CPU <25%  \u00b7  **HAS CAPACITY** = some GPUs free + CPU <25%  \u00b7  **CPU BUSY** = GPUs free + CPU \u226525%  \u00b7  **IN USE** = no free GPUs\n\n**CPU ONLY** = GPU monitoring disabled  \u00b7  **METRICS MISSING** = server online but GPU status unavailable  \u00b7  **OFFLINE** = node telemetry unavailable",
+        "content": "**FREE GPU** = five-minute compute <10% and VRAM <10%\n\n**AVAILABLE** = all GPUs free + CPU <25%  \u00b7  **HAS CAPACITY** = some GPUs free + CPU <25%  \u00b7  **CPU BUSY** = GPUs free + CPU \u226525%  \u00b7  **IN USE** = no free GPUs\n\n**CPU ONLY** = GPU monitoring disabled  \u00b7  **METRICS MISSING** = server online but GPU status unavailable  \u00b7  **OFFLINE** = node telemetry unavailable",
         "mode": "markdown"
       },
       "title": "",
@@ -283,7 +283,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Scheduling view with the highest current GPU and CPU temperatures. CPU temperature is blank when Linux exposes no supported hwmon CPU sensor.",
+      "description": "Current scheduling summary by server. GPU Utilization and VRAM show the highest five-minute average across GPUs; Free counts GPUs where both are below 10%. CPU is the five-minute host average, Memory is current host usage, and Total VRAM is total framebuffer capacity. GPU and CPU temperatures show current maxima; CPU temperature is N/A when Linux exposes no supported hwmon CPU sensor.",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -978,11 +978,11 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Highest five-minute average GPU utilization on each server.",
+      "description": "At each timestamp, shows the highest five-minute average compute utilization across the GPUs on each server. The contributing GPU may change over time; open Server Details for fixed per-GPU history.",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "palette-classic-by-name"
           },
           "custom": {
             "axisBorderShow": false,
@@ -1015,28 +1015,11 @@
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "line"
+              "mode": "off"
             }
           },
           "max": 100,
           "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 10
-              },
-              {
-                "color": "red",
-                "value": 70
-              }
-            ]
-          },
           "unit": "percent"
         },
         "overrides": []
@@ -1070,7 +1053,7 @@
           "refId": "A"
         }
       ],
-      "title": "GPU Compute \u00b7 Busiest GPU",
+      "title": "GPU Compute \u00b7 Highest GPU per Server",
       "type": "timeseries"
     },
     {
@@ -1078,11 +1061,11 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Highest five-minute average framebuffer utilization on each server; useful for spotting reserved models with little active compute.",
+      "description": "At each timestamp, shows the highest five-minute average VRAM allocation across the GPUs on each server. The contributing GPU may change over time; open Server Details for fixed per-GPU history.",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "palette-classic-by-name"
           },
           "custom": {
             "axisBorderShow": false,
@@ -1115,28 +1098,11 @@
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "line"
+              "mode": "off"
             }
           },
           "max": 100,
           "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 10
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "percent"
         },
         "overrides": []
@@ -1182,7 +1148,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "palette-classic-by-name"
           },
           "custom": {
             "axisBorderShow": false,
@@ -1215,28 +1181,11 @@
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "line"
+              "mode": "off"
             }
           },
           "max": 100,
           "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 25
-              },
-              {
-                "color": "red",
-                "value": 85
-              }
-            ]
-          },
           "unit": "percent"
         },
         "overrides": []
@@ -1282,7 +1231,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "palette-classic-by-name"
           },
           "custom": {
             "axisBorderShow": false,
@@ -1315,28 +1264,11 @@
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "line"
+              "mode": "off"
             }
           },
           "max": 100,
           "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 75
-              },
-              {
-                "color": "red",
-                "value": 90
-              }
-            ]
-          },
           "unit": "percent"
         },
         "overrides": []
@@ -1433,5 +1365,5 @@
   "timezone": "browser",
   "title": "GPU Server Availability",
   "uid": "multi-server-overview",
-  "version": 11
+  "version": 12
 }
