@@ -135,6 +135,30 @@ if [[ -z "$grafana_password" || "$grafana_password" == "CHANGE_ME" ]]; then
 fi
 chmod 600 .env
 
+ensure_local_data_dirs() {
+    mkdir -p data/prometheus data/grafana
+    if [[ $EUID -eq 0 ]]; then
+        chown 65534:65534 data/prometheus
+        chown 472:472 data/grafana
+    else
+        local prometheus_version grafana_version
+        prometheus_version="$(read_env PROMETHEUS_VERSION)"
+        prometheus_version="${prometheus_version:-v3.13.2}"
+        grafana_version="$(read_env GRAFANA_VERSION)"
+        grafana_version="${grafana_version:-13.1.3}"
+        docker run --rm --user root \
+            -v "$(pwd)/data/prometheus:/prometheus" \
+            "prom/prometheus:${prometheus_version}" \
+            sh -c 'chown -R 65534:65534 /prometheus'
+        docker run --rm --user root \
+            -v "$(pwd)/data/grafana:/var/lib/grafana" \
+            "grafana/grafana:${grafana_version}" \
+            sh -c 'chown -R 472:472 /var/lib/grafana'
+    fi
+}
+
+ensure_local_data_dirs
+
 grafana_port="$(read_env GRAFANA_PORT)"
 grafana_port="${grafana_port:-3000}"
 info "Publishing central services on $BIND_ADDRESS from a shared built-in bridge network namespace."

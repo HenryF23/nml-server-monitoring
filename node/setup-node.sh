@@ -195,6 +195,9 @@ if [[ -z "$dcgm_exporter_tag" || "$dcgm_exporter_tag" == "latest" || \
 fi
 chmod 600 .env
 
+mkdir -p data/prometheus-agent
+chown 65534:65534 data/prometheus-agent
+
 tmp_config="$(mktemp prometheus/agent.yml.tmp.XXXXXX)"
 cleanup_tmp_config() {
     [[ -z "$tmp_config" ]] || rm -f -- "$tmp_config"

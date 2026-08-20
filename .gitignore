@@ -1,5 +1,7 @@
 central/.env
+central/data/
 node/.env
+node/data/
 # May remain after upgrading from the former token-based gateway.
 node/.monitoring-token
 node/prometheus/agent.yml

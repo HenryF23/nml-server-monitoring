@@ -221,12 +221,21 @@ Grafana port are configurable in the generated `.env` files. DCGM Exporter is
 pinned to `4.6.0-4.8.3-distroless`; setup migrates legacy generated tags while
 preserving explicit custom versions.
 
+Runtime data is stored in local directories next to each Compose file:
+
+- `central/data/prometheus/` — central Prometheus TSDB
+- `central/data/grafana/` — Grafana state
+- `node/data/prometheus-agent/` — node Prometheus Agent WAL buffer
+
+These directories are created by the setup scripts and excluded from git.
+
 Provisioned dashboards are read-only in Grafana. Edit the JSON files under
 `central/grafana/dashboards/`; Grafana scans them for changes every 30 seconds.
 
 After upgrading from the former host-networked release, run `setup-central.sh`
-and `setup-node.sh` once to recreate the containers while preserving their named
-volumes. Continue to pass `--cpu-only` on CPU-only nodes.
+and `setup-node.sh` once to recreate the containers while preserving existing
+data under each stack's `data/` directory. Continue to pass `--cpu-only` on
+CPU-only nodes.
 
 ## Remove old host installations
 

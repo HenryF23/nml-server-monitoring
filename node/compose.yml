@@ -66,7 +66,4 @@ services:
       SERVER_NAME: ${SERVER_NAME:?Run setup-node.sh first}
     volumes:
       - ./prometheus/agent.yml:/etc/prometheus/agent.yml:ro
-      - prometheus_agent_data:/prometheus
-
-volumes:
-  prometheus_agent_data:
+      - ./data/prometheus-agent:/prometheus
