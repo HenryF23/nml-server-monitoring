@@ -176,7 +176,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "dark-green",
                 "value": null
               },
               {
@@ -217,12 +217,12 @@
           "editorMode": "code",
           "expr": "sum(nml:server_status{server=~\"${server:regex}\"} == bool 3) or vector(0)",
           "instant": true,
-          "legendFormat": "No Free GPUs",
+          "legendFormat": "In Use",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "Servers \u00b7 No Free GPUs",
+      "title": "Servers In Use",
       "type": "stat"
     },
     {
