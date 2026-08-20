@@ -91,6 +91,9 @@ central hostname, resolved IPv4 address, and server label are saved in
 Common alternatives are:
 
 ```bash
+# Monitor the central machine itself
+sudo ./setup-node.sh --central-host cs-nmg-lam01s --same-host
+
 # Use a fixed central address
 sudo ./setup-node.sh --central-ip 142.58.10.57
 
@@ -107,8 +110,11 @@ server, and continue passing it on future updates.
 
 Setup detects Docker's data directory for cAdvisor, validates the generated
 Prometheus Agent configuration, and verifies GPU access from Docker on GPU
-nodes. New nodes normally appear in Grafana within 30 seconds. To monitor the
-central server itself, run the same node setup there.
+nodes. New nodes normally appear in Grafana within 30 seconds. When the central
+server monitors itself, `--same-host` keeps the local exporters on loopback and
+lets the Agent reach the host's Tailscale or LAN address without looping through
+a Docker-published port. The setting is saved for later no-argument updates;
+use `--bridge` if the node is moved away from the central server.
 
 ## Verify
 
@@ -188,10 +194,13 @@ Docker releases older than 28.0 can expose loopback-published ports to hosts on
 the same layer-2 network; see Docker's
 [port-publishing documentation](https://docs.docker.com/engine/network/port-publishing/).
 
-Both stacks use Docker's built-in `bridge` and one shared network namespace per
-stack. Compose creates no project networks or additional subnets. This avoids
-subnet allocation from Docker's `default-address-pools`, but the built-in bridge
-provides weaker isolation from unrelated containers; use trusted Docker hosts.
+Remote node stacks and the central stack use Docker's built-in `bridge` and one
+shared network namespace per stack. Compose creates no project networks or
+additional subnets. This avoids subnet allocation from Docker's
+`default-address-pools`, but the built-in bridge provides weaker isolation from
+unrelated containers; use trusted Docker hosts. A node installed with
+`--same-host` uses host networking so it can reach the central machine's own
+published address; all of its monitoring listeners remain on host loopback.
 
 When central and node stacks share a host, their default ports do not conflict.
 If central binds to `0.0.0.0`, do not set `GRAFANA_PORT=9095` because the node
