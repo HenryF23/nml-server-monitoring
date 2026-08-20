@@ -1,0 +1,24 @@
+# Same-machine override for a node that also runs the central stack.
+#
+# A container on Docker's built-in bridge cannot reliably loop through a
+# published port on its own host. Use the host network for this node so remote
+# write can reach the host's Tailscale or LAN address directly. Every exporter
+# remains bound to host loopback.
+services:
+  node-exporter:
+    network_mode: host
+
+  cadvisor:
+    network_mode: host
+
+  dcgm-exporter:
+    network_mode: host
+
+  prometheus-agent:
+    network_mode: host
+    ports: !reset []
+    command:
+      - --agent
+      - --config.file=/etc/prometheus/agent.yml
+      - --storage.agent.path=/prometheus
+      - --web.listen-address=127.0.0.1:9095

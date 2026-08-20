@@ -10,12 +10,14 @@ die()  { printf '\033[1;31m[FAIL]\033[0m %s\n' "$*" >&2; exit 1; }
 usage() {
     cat <<'EOF'
 Usage:
-  sudo ./setup-node.sh --central-host HOSTNAME [--name NAME] [--cpu-only]
-  sudo ./setup-node.sh --central-ip IPV4 [--name NAME] [--cpu-only]
+  sudo ./setup-node.sh --central-host HOSTNAME [--name NAME] [--cpu-only] [--same-host]
+  sudo ./setup-node.sh --central-ip IPV4 [--name NAME] [--cpu-only] [--same-host]
 
 The central host or IP is saved after the first run. --central-host prefers
 Tailscale and falls back to system DNS. Use --central-ip to select an address
-explicitly. GPU monitoring is the default; use --cpu-only only without a GPU.
+explicitly. Use --same-host when this node also runs the central stack; use
+--bridge to return to the default remote-node networking mode. GPU monitoring
+is the default; use --cpu-only only without a GPU.
 EOF
 }
 
@@ -97,6 +99,7 @@ CENTRAL_HOST=""
 RESOLVED_CENTRAL_IP=""
 RESOLUTION_METHOD=""
 CPU_ONLY=0
+SAME_HOST_MODE=""
 DCGM_EXPORTER_PINNED_TAG="4.6.0-4.8.3-distroless"
 
 while [[ $# -gt 0 ]]; do
@@ -111,6 +114,8 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --cpu-only) CPU_ONLY=1; shift ;;
+        --same-host) SAME_HOST_MODE=true; shift ;;
+        --bridge) SAME_HOST_MODE=false; shift ;;
         -h|--help) usage; exit 0 ;;
         *) die "Unknown option: $1" ;;
     esac
@@ -160,6 +165,10 @@ set_env() {
 
 SERVER_NAME="${SERVER_NAME:-$(read_env SERVER_NAME)}"
 SERVER_NAME="${SERVER_NAME:-$(hostname -s)}"
+SAME_HOST_MODE="${SAME_HOST_MODE:-$(read_env SAME_HOST)}"
+SAME_HOST_MODE="${SAME_HOST_MODE:-false}"
+[[ "$SAME_HOST_MODE" == "true" || "$SAME_HOST_MODE" == "false" ]] || \
+    die "Invalid SAME_HOST '$SAME_HOST_MODE'. Use true or false."
 
 if [[ -z "$CENTRAL_HOST" && -z "$CENTRAL_IP" ]]; then
     CENTRAL_HOST="$(read_env CENTRAL_HOST)"
@@ -184,6 +193,12 @@ set_env SERVER_NAME "$SERVER_NAME"
 set_env CENTRAL_HOST "$CENTRAL_HOST"
 set_env CENTRAL_IP "$CENTRAL_IP"
 set_env DOCKER_ROOT_DIR "$DOCKER_ROOT_DIR"
+set_env SAME_HOST "$SAME_HOST_MODE"
+if [[ "$SAME_HOST_MODE" == "true" ]]; then
+    set_env COMPOSE_FILE "compose.yml:compose.same-host.yml"
+else
+    set_env COMPOSE_FILE "compose.yml"
+fi
 
 dcgm_exporter_tag="$(read_env DCGM_EXPORTER_TAG)"
 if [[ -z "$dcgm_exporter_tag" || "$dcgm_exporter_tag" == "latest" || \
@@ -218,7 +233,11 @@ fi
 chown 65534:65534 "$tmp_config"
 chmod 444 "$tmp_config"
 
-info "Using Docker's built-in bridge with one shared network namespace; no Compose network will be created."
+if [[ "$SAME_HOST_MODE" == "true" ]]; then
+    info "Central and node share this machine; using host networking for the local node."
+else
+    info "Using Docker's built-in bridge with one shared network namespace; no Compose network will be created."
+fi
 info "Using Docker data root $DOCKER_ROOT_DIR for cAdvisor."
 info "Pulling and validating the monitoring containers..."
 docker compose config >/dev/null
@@ -280,4 +299,5 @@ else
     echo "Central : ${CENTRAL_IP}"
 fi
 echo "Mode    : $( (( CPU_ONLY )) && echo CPU-only || echo GPU )"
+echo "Network : $( [[ "$SAME_HOST_MODE" == "true" ]] && echo same-host || echo bridge )"
 echo "Verify  : sudo ./verify-node.sh"
